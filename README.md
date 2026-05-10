@@ -1,7 +1,7 @@
-# Security Platform — amazing-protection
+# Security Platform — jgutierrezdtt
 
-> **Repositorio central de seguridad** para la organización `amazing-protection`.  
-> Proporciona workflows reutilizables, políticas de gobernanza, documentación técnica y templates listos para usar en cualquier repositorio de la organización.
+> **Repositorio central de seguridad** para la organización `jgutierrezdtt`.  
+> Proporciona workflows reutilizables, reglas Semgrep, tutoriales y el template base para cualquier repositorio nuevo.
 
 ---
 
@@ -24,115 +24,133 @@
 
 ## Arquitectura del Sistema
 
+El principio central es simple: **las reglas viven en un sitio, los repos solo llaman**.
+
 ```
-amazing-protection/
- security-platform/          ← Este repositorio
-    .github/workflows/
-       reusable/           ← Workflows llamados por todos los repos
-           semgrep-scan.yml
-           dependabot-check.yml
-           slsa-build.yml
-    config/semgrep/         ← Reglas Semgrep centralizadas
-    docs/tutorials/         ← 10 tutoriales técnicos
-    templates/consumer/     ← Templates listos para copiar
-
- security-exceptions/        ← Registro de excepciones (read-only)
-     exceptions/global/      ← Falsos positivos globales
-     exceptions/by-repo/     ← Excepciones por repositorio
-     schemas/                ← JSON Schema de validación
-```
-
----
-
-## Onboarding de repositorios
-
-### Escalar a 200 repos existentes (onboarding masivo)
-
-El script `scripts/bulk-onboard.py` aplica los templates de seguridad a todos los repos de la organización y abre un PR en cada uno:
-
-```bash
-# Requiere: pip install requests && export GH_TOKEN=<token-con-contents:write>
-
-# Onboarding de todos los repos (excluye archivados y forks)
-python3 scripts/bulk-onboard.py --org amazing-protection
-
-# Solo repos específicos
-python3 scripts/bulk-onboard.py --org amazing-protection --repos-file repos.txt
-
-# Simular sin crear PRs (recomendado antes de lanzar en producción)
-python3 scripts/bulk-onboard.py --org amazing-protection --dry-run
-
-# Limitar para pruebas (p.ej: probar con 5 repos)
-python3 scripts/bulk-onboard.py --org amazing-protection --limit 5
+jgutierrezdtt/
+ ├── security-platform/          ← Este repo — reglas, workflows, tutoriales
+ │    └── .github/workflows/reusable/
+ │         ├── semgrep-scan.yml       ← logica de escaneo
+ │         ├── dependabot-check.yml   ← logica de dependencias
+ │         └── slsa-build.yml         ← firma de artefactos
+ │
+ ├── security-consumer-template/  ← Template GitHub para nuevos repos
+ │    └── .github/workflows/
+ │         └── security.yml           ← unico archivo que necesita cada repo
+ │
+ ├── security-example-app/        ← Tutorial funcional — ejemplo vivo
+ │
+ ├── security-exceptions/         ← Registro de excepciones (read-only)
+ │    ├── exceptions/global/
+ │    └── exceptions/by-repo/
+ │
+ └── tu-repo/                     ← Cualquier repositorio consumer
+      └── .github/workflows/
+           └── security.yml  ──────► llama a security-platform@main
 ```
 
-El script:
-- Detecta automáticamente todos los repos no configurados
-- Crea la rama `security/onboarding-platform` en cada repo
-- Aplica los 5 consumer templates (workflows, dependabot, CODEOWNERS, PR template, .semgrepignore)
-- Abre un PR explicativo listo para revisar y mergear
-- Actualiza `config/monitored-repos.txt` automáticamente
-- Evita duplicados si ya existe un PR de onboarding o el repo ya está configurado
+### Como funciona el modelo de actualizacion
 
-### Detección automática de repos nuevos
+Cuando el security team actualiza una regla de Semgrep o cambia un umbral en
+`security-platform`, **todos los repos consumers lo reciben automaticamente**
+en su siguiente ejecucion. No hay nada que sincronizar ni actualizar en los repos consumers.
 
-El workflow [detect-unconfigured-repos.yml](.github/workflows/detect-unconfigured-repos.yml) se ejecuta cada lunes y:
-- Detecta repos sin `.github/workflows/security.yml`
-- Crea automáticamente un GitHub Issue con la lista de repos pendientes
-- El issue asigna al `security-team` para que lancen el onboarding
-
-Para forzar una comprobación inmediata:
-```bash
-gh workflow run detect-unconfigured-repos.yml --repo amazing-protection/security-platform
-```
-
----
-
-## Quickstart para nuevos repositorios
-
-### 1. Copiar los templates al repositorio
-
-```bash
-# Desde la raíz de tu repositorio
-PLATFORM=amazing-protection/security-platform
-
-gh api repos/${PLATFORM}/contents/templates/consumer \
-  --jq '.[] | .path' | while read file; do
-  gh api repos/${PLATFORM}/contents/${file} \
-    --jq '.content' | base64 -d > "${file#templates/consumer/}"
-done
-```
-
-### 2. Configurar los secretos requeridos
-
-```bash
-# Token de lectura del repo de excepciones (Fine-grained PAT o GitHub App)
-gh secret set EXCEPTIONS_READER_TOKEN --repo tu-org/tu-repo
-
-# Token de Semgrep Cloud Platform (opcional pero recomendado)
-gh secret set SEMGREP_APP_TOKEN --repo tu-org/tu-repo
-```
-
-### 3. Habilitar Code Scanning
-
-```bash
-gh api repos/tu-org/tu-repo/code-scanning/default-setup \
-  -X PATCH \
-  --field state=configured \
-  --field query_suite=security-extended
-```
-
-### 4. Llamar al workflow reutilizable
+El unico archivo que existe en cada repo consumer es un `security.yml` de ~15 lineas
+que simplemente llama a este repo:
 
 ```yaml
-# .github/workflows/security.yml en tu repositorio
 jobs:
   semgrep:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
-    secrets:
-      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-      EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+  dependabot:
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
 ```
+
+Ese archivo no cambia nunca. Las actualizaciones de seguridad no requieren ningun
+PR en los repos consumers.
+
+---
+
+## Como integrar un nuevo repositorio
+
+### Repos nuevos — un clic, sin configuracion manual
+
+[security-consumer-template](https://github.com/jgutierrezdtt/security-consumer-template)
+es un GitHub Template Repository. Para crear un nuevo repo con los controles de seguridad ya activos:
+
+1. Ir a [github.com/jgutierrezdtt/security-consumer-template](https://github.com/jgutierrezdtt/security-consumer-template)
+2. Pulsar **Use this template** > **Create a new repository**
+3. Dar nombre y crear el repositorio
+
+Listo. El workflow de seguridad se ejecuta desde el primer PR. No hay archivos que copiar ni scripts que lanzar.
+
+### Repos existentes — anadir un archivo
+
+Para repos que ya existen, el unico paso es crear `.github/workflows/security.yml` con este contenido:
+
+```yaml
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  semgrep:
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    secrets:
+      EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  dependabot:
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    secrets:
+      DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}
+```
+
+Ese archivo no volvera a necesitar modificaciones. Cualquier cambio en las reglas
+o umbrales se hace aqui en security-platform y se propaga automaticamente.
+
+### Secrets necesarios en cada repo consumer
+
+| Secret | Como obtenerlo |
+|--------|----------------|
+| `EXCEPTIONS_READER_TOKEN` | Fine-grained PAT: Contents read-only en security-exceptions |
+| `DEPENDABOT_CHECK_TOKEN` | Fine-grained PAT: Security events read en el repo |
+| `SEMGREP_APP_TOKEN` | Opcional — Semgrep Cloud Platform |
+
+### Deteccion automatica de repos sin configurar
+
+El workflow [detect-unconfigured-repos.yml](.github/workflows/detect-unconfigured-repos.yml)
+se ejecuta cada lunes y crea un GitHub Issue con la lista de repos que aun no tienen
+`security.yml`. El security team recibe la notificacion y puede actuar sin necesidad
+de ejecutar ningun comando.
+
+---
+
+## Quickstart
+
+Ver [security-consumer-template](https://github.com/jgutierrezdtt/security-consumer-template)
+y [security-example-app](https://github.com/jgutierrezdtt/security-example-app)
+para ejemplos funcionales completos.
+
+Resumen de 3 pasos para un repo existente:
+
+**1. Crear `.github/workflows/security.yml`** (ver seccion anterior)
+
+**2. Anadir secrets**
+```bash
+gh secret set EXCEPTIONS_READER_TOKEN --repo jgutierrezdtt/tu-repo
+gh secret set DEPENDABOT_CHECK_TOKEN  --repo jgutierrezdtt/tu-repo
+```
+
+**3. Abrir un PR de prueba** — el workflow se ejecuta automaticamente
 
 ---
 
@@ -175,7 +193,7 @@ Escaneo SAST con Semgrep, integración con excepciones, tabla visual en PR y sec
 | `fail-on-severity` | `string` | `high` | Severidad mínima para fallar: `critical`, `high`, `medium`, `low` |
 | `upload-sarif` | `boolean` | `true` | Subir SARIF al Security tab de GitHub |
 | `create-issues` | `boolean` | `false` | Crear GitHub Issues para cada hallazgo |
-| `exceptions-repo` | `string` | `amazing-protection/security-exceptions` | Repo de excepciones |
+| `exceptions-repo` | `string` | `jgutierrezdtt/security-exceptions` | Repo de excepciones |
 
 **Secrets:**
 
@@ -227,9 +245,9 @@ templates/consumer/
 
 ## Contribuciones
 
-Solo el equipo `@amazing-protection/security-team` puede aprobar cambios en este repositorio.  
+Solo el equipo `@jgutierrezdtt/security-team` puede aprobar cambios en este repositorio.  
 Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para el proceso de contribución.
 
 ## Licencia
 
-Uso interno — amazing-protection. Consulta [LICENSE](LICENSE).
+Uso interno — jgutierrezdtt. Consulta [LICENSE](LICENSE).

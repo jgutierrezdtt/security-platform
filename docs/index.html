@@ -335,16 +335,15 @@
     <li><a href="#overview" class="active">Introduccion</a></li>
     <li><a href="#architecture">Arquitectura</a></li>
     <li class="section-label">Adopcion</li>
-    <li><a href="#onboarding">Onboarding masivo</a></li>
-    <li><a href="#quickstart">Quickstart</a></li>
+    <li><a href="#newrepos">Repos nuevos</a></li>
+    <li><a href="#existing">Repos existentes</a></li>
     <li class="section-label">Workflows</li>
     <li><a href="#semgrep">Semgrep Scan</a></li>
     <li><a href="#dependabot">Dependabot Check</a></li>
     <li><a href="#slsa">SLSA Build</a></li>
     <li class="section-label">Referencia</li>
     <li><a href="#tutorials">Tutoriales (10)</a></li>
-    <li><a href="#templates">Templates</a></li>
-    <li><a href="#scripts">Scripts</a></li>
+    <li><a href="#repos">Repos del ecosistema</a></li>
   </ul>
 </nav>
 
@@ -372,19 +371,19 @@
         </ul>
       </div>
       <div class="card">
-        <h4>Gobernanza</h4>
+        <h4>Un cambio, todos los repos</h4>
         <ul>
-          <li>10 tutoriales tecnicos detallados</li>
-          <li>Templates consumer listos para usar</li>
-          <li>Dashboard de seguridad de la org</li>
+          <li>Los consumers llaman a este repo</li>
+          <li>Actualizacion automatica en cada run</li>
+          <li>Sin PRs en repos consumer</li>
         </ul>
       </div>
       <div class="card">
-        <h4>Escalabilidad</h4>
+        <h4>Incorporacion sin scripts</h4>
         <ul>
-          <li>Script de onboarding masivo</li>
-          <li>Deteccion automatica de repos nuevos</li>
-          <li>Registro centralizado de excepciones</li>
+          <li>Template repo para repos nuevos</li>
+          <li>1 archivo para repos existentes</li>
+          <li>Deteccion automatica de nuevos repos</li>
         </ul>
       </div>
       <div class="card">
@@ -392,7 +391,7 @@
         <ul>
           <li>GitHub Advanced Security (GHAS)</li>
           <li>Semgrep Cloud Platform</li>
-          <li>OpenSSF Scorecard</li>
+          <li>Registro central de excepciones</li>
         </ul>
       </div>
     </div>
@@ -402,103 +401,119 @@
   <section id="architecture">
     <h2>Arquitectura del sistema</h2>
     <p>
-      El sistema sigue un patron hub-and-spoke. Este repositorio actua como hub central;
-      los repositorios consumer llaman a los workflows reutilizables sin copiar codigo de seguridad.
+      Las reglas y la logica de seguridad viven aqui. Los repos consumer solo
+      tienen un archivo de 15 lineas que llama a este repo. Cuando se actualiza
+      algo aqui, todos los repos lo reciben automaticamente en su siguiente run.
     </p>
     <pre><code>jgutierrezdtt/
-├── security-platform/          ← Este repositorio (hub)
-│   ├── .github/workflows/
-│   │   └── reusable/           ← Llamados por todos los repos
-│   │       ├── semgrep-scan.yml
-│   │       ├── dependabot-check.yml
-│   │       └── slsa-build.yml
-│   ├── config/semgrep/         ← Reglas Semgrep centralizadas
-│   ├── docs/tutorials/         ← 10 tutoriales tecnicos
-│   ├── scripts/                ← Onboarding y reporte de org
-│   └── templates/consumer/     ← Templates para copiar
+├── security-platform/           ← Reglas, workflows, tutoriales (este repo)
+│   └── .github/workflows/reusable/
+│       ├── semgrep-scan.yml     ← logica de Semgrep
+│       ├── dependabot-check.yml ← logica de Dependabot
+│       └── slsa-build.yml       ← firma de artefactos
 │
-└── security-exceptions/        ← Registro de excepciones (read-only)
-    ├── exceptions/global/      ← Falsos positivos para toda la org
-    ├── exceptions/by-repo/     ← Excepciones por repositorio
-    └── schemas/                ← JSON Schema de validacion</code></pre>
+├── security-consumer-template/  ← GitHub Template — para repos nuevos
+│   └── .github/workflows/
+│       └── security.yml         ← llama a security-platform@main
+│
+├── security-example-app/        ← Tutorial vivo — ejemplo funcional
+│
+├── security-exceptions/         ← Registro de excepciones (read-only)
+│
+└── tu-repo/                     ← Cualquier repo consumer
+    └── .github/workflows/
+        └── security.yml  ───────► security-platform (reglas aqui)</code></pre>
 
-    <h3>Flujo de un Pull Request</h3>
+    <h3>Por que este modelo resuelve el problema de escala</h3>
     <p>
-      Cuando un desarrollador abre un PR en un repositorio consumer, el workflow de seguridad
-      ejecuta Semgrep y Dependabot en paralelo, descarga las excepciones aprobadas,
-      genera una tabla visual en el propio PR y bloquea el merge si hay hallazgos
-      de severidad critica o alta sin excepcion aprobada.
+      Si tienes 200 repos y decides cambiar el umbral de severidad de HIGH a CRITICAL,
+      solo cambias un valor en <code>semgrep-scan.yml</code> de este repo.
+      En el siguiente PR de cada repo, el nuevo umbral ya esta activo.
+      No hay PRs que abrir, no hay archivos que sincronizar.
     </p>
   </section>
 
-  <!-- ONBOARDING -->
-  <section id="onboarding">
-    <h2>Onboarding de repositorios</h2>
-
-    <h3>Escalar a repositorios existentes</h3>
+  <!-- REPOS NUEVOS -->
+  <section id="newrepos">
+    <h2>Repos nuevos — un clic, sin configuracion</h2>
     <p>
-      El script <code>scripts/bulk-onboard.py</code> aplica los templates de seguridad
-      a todos los repos de la organizacion y abre un PR en cada uno, listo para que
-      cada equipo revise y mergee a su ritmo.
+      <a href="https://github.com/jgutierrezdtt/security-consumer-template">security-consumer-template</a>
+      es un <strong>GitHub Template Repository</strong>. Crear un repo desde el activa
+      los checks de seguridad desde el primer commit, sin copiar archivos ni ejecutar comandos.
     </p>
-    <pre><code># Simulacion sin crear PRs (recomendado primero)
-python3 scripts/bulk-onboard.py --org jgutierrezdtt --dry-run
-
-# Onboarding de todos los repos
-python3 scripts/bulk-onboard.py --org jgutierrezdtt
-
-# Solo repos especificos (fichero con uno por linea)
-python3 scripts/bulk-onboard.py --org jgutierrezdtt --repos-file repos.txt
-
-# Limitar para prueba
-python3 scripts/bulk-onboard.py --org jgutierrezdtt --limit 5</code></pre>
-
-    <h3>Deteccion de repos nuevos</h3>
-    <p>
-      El workflow <code>detect-unconfigured-repos.yml</code> se ejecuta cada lunes.
-      Si detecta repos sin el workflow de seguridad, crea un GitHub Issue asignado
-      al security-team con la lista completa. Los repos nuevos no pueden quedar sin
-      configurar sin que el equipo lo sepa.
-    </p>
-  </section>
-
-  <!-- QUICKSTART -->
-  <section id="quickstart">
-    <h2>Quickstart para un repositorio individual</h2>
     <ol class="steps">
       <li>
         <div>
-          <h4>Copiar los templates</h4>
-          <pre><code>PLATFORM=jgutierrezdtt/security-platform
-
-gh api repos/${PLATFORM}/contents/templates/consumer \
-  --jq '.[] | .path' | while read file; do
-  gh api repos/${PLATFORM}/contents/${file} \
-    --jq '.content' | base64 -d > "${file#templates/consumer/}"
-done</code></pre>
+          <h4>Ir al template y pulsar &ldquo;Use this template&rdquo;</h4>
+          <p style="margin:0">
+            <a href="https://github.com/jgutierrezdtt/security-consumer-template/generate">
+              github.com/jgutierrezdtt/security-consumer-template/generate
+            </a>
+          </p>
         </div>
       </li>
       <li>
         <div>
-          <h4>Configurar los secretos requeridos</h4>
-          <pre><code>gh secret set EXCEPTIONS_READER_TOKEN --repo tu-org/tu-repo
-gh secret set SEMGREP_APP_TOKEN --repo tu-org/tu-repo   # opcional</code></pre>
+          <h4>Dar nombre al repo y crear</h4>
+          <p style="margin:0">GitHub copia todos los archivos del template al nuevo repo.</p>
         </div>
       </li>
       <li>
         <div>
-          <h4>Habilitar Code Scanning</h4>
-          <pre><code>gh api repos/tu-org/tu-repo/code-scanning/default-setup \
-  -X PATCH --field state=configured --field query_suite=security-extended</code></pre>
+          <h4>Anadir los secrets (una sola vez)</h4>
+          <pre><code>gh secret set EXCEPTIONS_READER_TOKEN --repo jgutierrezdtt/tu-nuevo-repo
+gh secret set DEPENDABOT_CHECK_TOKEN  --repo jgutierrezdtt/tu-nuevo-repo</code></pre>
         </div>
       </li>
       <li>
         <div>
-          <h4>Abrir el primer PR — el workflow se activa automaticamente</h4>
-          <p style="margin:0">El primer PR mostrara el comentario de Semgrep y el resumen de Dependabot.</p>
+          <h4>Abrir el primer PR — los checks se ejecutan automaticamente</h4>
+          <p style="margin:0">No hay ningun paso mas. Los cambios futuros en las reglas de seguridad llegan solos.</p>
         </div>
       </li>
     </ol>
+  </section>
+
+  <!-- REPOS EXISTENTES -->
+  <section id="existing">
+    <h2>Repos existentes — anadir un archivo</h2>
+    <p>
+      Para repos que ya existen, el unico paso es crear
+      <code>.github/workflows/security.yml</code> con este contenido:
+    </p>
+    <pre><code>name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  semgrep:
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    secrets:
+      EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  dependabot:
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    secrets:
+      DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}</code></pre>
+    <p>
+      Ese archivo no vuelve a tocarse. Cualquier actualizacion de seguridad se hace
+      en este repo (security-platform) y se propaga automaticamente.
+    </p>
+    <h3>Deteccion de repos sin configurar</h3>
+    <p>
+      El workflow <code>detect-unconfigured-repos.yml</code> se ejecuta cada lunes
+      y crea un GitHub Issue con todos los repos que aun no tienen <code>security.yml</code>.
+      El security team recibe la notificacion sin necesidad de ejecutar ningun comando.
+    </p>
   </section>
 
   <!-- WORKFLOWS -->
@@ -645,36 +660,27 @@ gh secret set SEMGREP_APP_TOKEN --repo tu-org/tu-repo   # opcional</code></pre>
     </ul>
   </section>
 
-  <!-- TEMPLATES -->
-  <section id="templates">
-    <h2>Templates consumer</h2>
-    <p>Archivos listos para copiar en cualquier repositorio consumer.</p>
+  <!-- REPOS DEL ECOSISTEMA -->
+  <section id="repos">
+    <h2>Repos del ecosistema</h2>
     <table>
-      <thead><tr><th>Archivo</th><th>Proposito</th></tr></thead>
-      <tbody>
-        <tr><td><code>.github/workflows/security.yml</code></td><td>Pipeline principal: Semgrep + Dependabot + security gate</td></tr>
-        <tr><td><code>.github/workflows/release.yml</code></td><td>Release con SLSA Level 3 provenance</td></tr>
-        <tr><td><code>.github/dependabot.yml</code></td><td>Actualizacion automatica de dependencias (todos los ecosistemas)</td></tr>
-        <tr><td><code>.github/CODEOWNERS</code></td><td>Propietarios de codigo por directorio</td></tr>
-        <tr><td><code>.github/PULL_REQUEST_TEMPLATE.md</code></td><td>Template de PR con checklist de seguridad</td></tr>
-        <tr><td><code>.semgrepignore</code></td><td>Patrones de archivos excluidos del analisis</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- SCRIPTS -->
-  <section id="scripts">
-    <h2>Scripts</h2>
-    <table>
-      <thead><tr><th>Script</th><th>Uso</th></tr></thead>
+      <thead><tr><th>Repositorio</th><th>Proposito</th></tr></thead>
       <tbody>
         <tr>
-          <td><code>scripts/bulk-onboard.py</code></td>
-          <td>Onboarding masivo: aplica templates y abre PRs en todos los repos de la org</td>
+          <td><a href="https://github.com/jgutierrezdtt/security-platform">security-platform</a></td>
+          <td>Este repo. Reglas, workflows reutilizables, tutoriales y configuracion central</td>
         </tr>
         <tr>
-          <td><code>scripts/generate-org-report.py</code></td>
-          <td>Genera el dashboard de seguridad de la org y actualiza el README automaticamente</td>
+          <td><a href="https://github.com/jgutierrezdtt/security-consumer-template">security-consumer-template</a></td>
+          <td>GitHub Template Repository. Crea repos nuevos ya configurados con un clic</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/jgutierrezdtt/security-example-app">security-example-app</a></td>
+          <td>Tutorial funcional. App de ejemplo con hallazgos comentados y excepciones</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/jgutierrezdtt/security-exceptions">security-exceptions</a></td>
+          <td>Registro de excepciones aprobadas. Solo lectura para repos consumer</td>
         </tr>
       </tbody>
     </table>
