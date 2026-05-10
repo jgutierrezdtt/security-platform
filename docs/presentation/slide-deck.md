@@ -1,4 +1,4 @@
-# Deck: Security Platform — amazing-protection
+# Deck: Security Platform — jgutierrezdtt
 ## Guía de slides para presentación
 
 **Audiencia:** Equipos de desarrollo + Tech Leads  
@@ -14,9 +14,9 @@
 
 ### Slide 1 — Portada
 **Título:** Seguridad sin fricciones  
-**Subtítulo:** El Security Platform de amazing-protection  
+**Subtítulo:** El Security Platform de jgutierrezdtt  
 **Visual:** Logo organización + iconos de shield / pipeline  
-**Pie:** amazing-protection · Mayo 2026
+**Pie:** jgutierrezdtt · Mayo 2026
 
 ---
 
@@ -49,7 +49,7 @@
 **Título:** Una plataforma, adoptada por todos
 
 **Frase central:**  
-> "Que la seguridad sea una consecuencia automática de trabajar en amazing-protection, no un esfuerzo extra."
+> "Que la seguridad sea una consecuencia automática de trabajar en jgutierrezdtt, no un esfuerzo extra."
 
 **3 principios:**
 1. **Centralizado** — las reglas se definen una vez, se aplican en todos los repos
@@ -232,21 +232,28 @@ Security Summary Job
 ---
 
 ### Slide 13 — Cómo adoptar (para un repo individual)
-**Título:** Onboarding de un repo en ~30 minutos
+**Título:** Onboarding de un repo en ~15 minutos
 
 **Timeline visual (línea horizontal):**
 
 ```
-0 min          5 min             15 min           30 min
-  │               │                  │               │
-Copiar         Configurar         Primer PR        ✅ Activo
-templates      secretos           con escaneo
+0 min            5 min              15 min
+  │                │                  │
+Usar el         Añadir           Primer PR
+templat repo    secretos         con escaneo ✅
 ```
+
+**El proceso (sin scripts, sin copiar archivos):**
+1. Ir a `github.com/jgutierrezdtt/security-consumer-template` → botón "Use this template"
+2. Crear el nuevo repo — todos los workflows llegan pre-configurados
+3. Añadir los 3 secretos y listo
 
 **Los 3 secretos necesarios:**
 1. `EXCEPTIONS_READER_TOKEN` — acceso read-only al repo de excepciones
 2. `SEMGREP_APP_TOKEN` — (opcional) para Semgrep Cloud Platform
 3. `DEPENDABOT_CHECK_TOKEN` — para leer alertas de Dependabot
+
+**Para repos ya existentes:** Copiar únicamente `.github/workflows/security.yml` — 15 líneas, el workflow llama al resto.
 
 ---
 
@@ -273,19 +280,22 @@ Semana 1-2: report-only → Semana 3-4: bloquear CRITICAL → Mes 2: bloquear HI
 ---
 
 ### Slide 15 — Escalar a 200 repos
-**Título:** Onboarding masivo: de 0 a 200 en un día
+**Título:** Todos los repos configurados, sin coordinación manual
 
-**El proceso:**
-1. El security team ejecuta `bulk-onboard.py`
-2. El script abre **un PR en cada repo** con todos los archivos configurados
+**Repos nuevos (modelo orgánico):**
+- Cualquier equipo usa `security-consumer-template` como base → el repo nace pre-configurado
+- Añaden los 3 secretos y ya participan en el sistema
+- No interviene el security team
+
+**Repos existentes (migración masiva):**
+1. El security team ejecuta `scripts/bulk-onboard.py`
+2. El script abre **un PR en cada repo** con el archivo `security.yml` ya configurado
 3. Cada equipo revisa y mergea su PR cuando esté listo
-4. El script actualiza automáticamente el dashboard de la org
+4. No es big bang: cada equipo mergea a su ritmo
 
-**No es big bang:** Cada equipo mergea a su ritmo. El PR ya está listo — solo hay que aprobarlo.
-
-**Detección de nuevos repos:**
+**Detección de repos sin configurar:**
 - Cada lunes, el workflow `detect-unconfigured-repos` escanea la org
-- Si detecta repos sin configurar → crea un issue automático asignado al security team
+- Si detecta repos sin el workflow → crea un issue automático asignado al security team
 - Los repos nuevos nunca quedan "fuera del radar"
 
 ---
@@ -389,16 +399,16 @@ PR aprobado → excepción activa (máx 1 año)
 
 | Gobernanza | Herramientas |
 |------------|-------------|
-| 10 tutoriales técnicos | Semgrep con excepciones gestionadas |
+| 11 tutoriales técnicos + guía developer | Semgrep con excepciones gestionadas |
 | Roles y CODEOWNERS definidos | Dependabot activo en todos los repos |
 | Proceso de aprobación de PRs | SLSA Level 3 para releases |
 | Proceso de excepciones auditado | Dashboard automático de la org |
 
 | Escala | Mantenimiento |
 |--------|--------------|
-| Onboarding de 200 repos en 1 día | Detección automática de repos nuevos |
-| Templates listos para copiar | Excepciones con expiración automática |
-| 1 PR por repo, el equipo decide cuándo mergear | La plataforma se escanea a sí misma |
+| Template repo — repos nuevos pre-configurados | Detección automática de repos nuevos |
+| Onboarding masivo con `bulk-onboard.py` | Excepciones con expiración automática |
+| App de ejemplo (`security-example-app`) | La plataforma se escanea a sí misma |
 
 ---
 
@@ -432,6 +442,8 @@ PR aprobado → excepción activa (máx 1 año)
 3. En casos extremos: el security team puede aprobar un bypass documentado en el issue
 
 **Nota importante:** El bypass siempre queda registrado. No hay "saltarse" el proceso sin trazabilidad.
+
+**Recurso para developers:** [pr-blocked-guide.md](https://github.com/jgutierrezdtt/security-platform/blob/main/docs/tutorials/pr-blocked-guide.md) — guía paso a paso para cada situación (bug real / falso positivo / excepción existente que no filtra). El enlace aparece automáticamente en el comentario del PR cuando Semgrep reporta hallazgos.
 
 ---
 
