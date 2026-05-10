@@ -35,7 +35,7 @@ jobs:
         id: detect
         env:
           GH_TOKEN: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
-          ORG: "amazing-protection"
+          ORG: "jgutierrezdtt"
           CREATE_ISSUES: ${{ inputs.create-issues || 'false' }}
         run: |
           python3 << 'PYTHON'
@@ -182,7 +182,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "${TITLE}" \
             --label "onboarding-pending,security" \
-            --assignee "@amazing-protection/security-team" \
+            --assignee "@jgutierrezdtt/security-team" \
             --body "## Repos sin security workflow
 
           Los siguientes repos aún no tienen el workflow de seguridad configurado.
@@ -192,12 +192,12 @@ jobs:
           Ejecutar el onboarding masivo:
           \`\`\`bash
           export GH_TOKEN=<ORG_SECURITY_REPORT_TOKEN>
-          python3 scripts/bulk-onboard.py --org amazing-protection
+          python3 scripts/bulk-onboard.py --org jgutierrezdtt
           \`\`\`
 
           O aplicar repo por repo con:
           \`\`\`bash
-          python3 scripts/bulk-onboard.py --org amazing-protection --repos-file repos.txt
+          python3 scripts/bulk-onboard.py --org jgutierrezdtt --repos-file repos.txt
           \`\`\`
 
           ### Repos pendientes

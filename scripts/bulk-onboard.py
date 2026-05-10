@@ -14,26 +14,26 @@ Crea un PR en cada repo con todos los cambios, listo para que el equipo revise.
 
 Uso:
     # Onboarding de todos los repos de la org (excluye repos archivados y forks)
-    python3 scripts/bulk-onboard.py --org amazing-protection
+    python3 scripts/bulk-onboard.py --org jgutierrezdtt
 
     # Solo repos específicos (de un fichero, uno por línea)
-    python3 scripts/bulk-onboard.py --org amazing-protection --repos-file repos.txt
+    python3 scripts/bulk-onboard.py --org jgutierrezdtt --repos-file repos.txt
 
     # Simular sin crear PRs
-    python3 scripts/bulk-onboard.py --org amazing-protection --dry-run
+    python3 scripts/bulk-onboard.py --org jgutierrezdtt --dry-run
 
     # Forzar re-onboarding aunque ya tenga el workflow
-    python3 scripts/bulk-onboard.py --org amazing-protection --force
+    python3 scripts/bulk-onboard.py --org jgutierrezdtt --force
 
     # Limitar para pruebas
-    python3 scripts/bulk-onboard.py --org amazing-protection --limit 5
+    python3 scripts/bulk-onboard.py --org jgutierrezdtt --limit 5
 
 Requiere:
     GH_TOKEN con permisos: contents:write, pull-requests:write, metadata:read
     pip install requests
 
 Variables de entorno opcionales:
-    SECURITY_PLATFORM_REPO  (default: amazing-protection/security-platform)
+    SECURITY_PLATFORM_REPO  (default: jgutierrezdtt/security-platform)
     SECURITY_PLATFORM_REF   (default: main)
 """
 
@@ -53,7 +53,7 @@ except ImportError:
 
 # ── Configuración ─────────────────────────────────────────────────────────────
 
-PLATFORM_REPO = os.environ.get("SECURITY_PLATFORM_REPO", "amazing-protection/security-platform")
+PLATFORM_REPO = os.environ.get("SECURITY_PLATFORM_REPO", "jgutierrezdtt/security-platform")
 PLATFORM_REF  = os.environ.get("SECURITY_PLATFORM_REF", "main")
 
 # Templates a aplicar: (ruta en security-platform, ruta destino en el repo)
@@ -68,7 +68,7 @@ TEMPLATES = [
 # CODEOWNERS solo se añade si NO existe ya en el repo destino
 CODEOWNERS_TEMPLATE = ("templates/consumer/.github/CODEOWNERS", ".github/CODEOWNERS")
 
-PR_TITLE  = "security: onboarding al security-platform de amazing-protection"
+PR_TITLE  = "security: onboarding al security-platform de jgutierrezdtt"
 PR_BRANCH = "security/onboarding-platform"
 PR_BODY   = """\
 ## Onboarding al Security Platform
@@ -94,10 +94,10 @@ Este PR fue generado automáticamente por el script de onboarding masivo.
 
 ### Documentación
 
-📖 [Guía completa de onboarding](https://github.com/amazing-protection/security-platform/blob/main/ONBOARDING.md)
+📖 [Guía completa de onboarding](https://github.com/jgutierrezdtt/security-platform/blob/main/ONBOARDING.md)
 
 ---
-*Generado por [security-platform](https://github.com/amazing-protection/security-platform) · Script: `scripts/bulk-onboard.py`*
+*Generado por [security-platform](https://github.com/jgutierrezdtt/security-platform) · Script: `scripts/bulk-onboard.py`*
 """
 
 # ── API Helper ────────────────────────────────────────────────────────────────

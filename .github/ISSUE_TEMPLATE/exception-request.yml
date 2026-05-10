@@ -24,7 +24,7 @@ body:
     attributes:
       label: Repositorio afectado
       description: Nombre completo del repositorio (org/repo)
-      placeholder: "amazing-protection/mi-repo"
+      placeholder: "jgutierrezdtt/mi-repo"
     validations:
       required: true
 
@@ -102,7 +102,7 @@ body:
     attributes:
       label: PR donde aparece el hallazgo
       description: URL del Pull Request donde Semgrep reportó el hallazgo
-      placeholder: "https://github.com/amazing-protection/mi-repo/pull/42"
+      placeholder: "https://github.com/jgutierrezdtt/mi-repo/pull/42"
     validations:
       required: true
 
@@ -111,7 +111,7 @@ body:
     attributes:
       label: Confirmación
       options:
-        - label: He leído y entiendo la [política de excepciones](https://github.com/amazing-protection/security-platform/blob/main/docs/tutorials/08-exception-management.md)
+        - label: He leído y entiendo la [política de excepciones](https://github.com/jgutierrezdtt/security-platform/blob/main/docs/tutorials/08-exception-management.md)
           required: true
         - label: La justificación que proporciono es técnicamente correcta y verificable en el código
           required: true

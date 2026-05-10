@@ -8,7 +8,7 @@
 
 ## ¿Qué cubre este tutorial?
 
-El sistema de reporting de seguridad de `amazing-protection` genera:
+El sistema de reporting de seguridad de `jgutierrezdtt` genera:
 
 1. **Comentarios visuales en PRs** — tabla de hallazgos por each scan
 2. **Job Summaries** — resumen visual en la pestaña Actions de GitHub
@@ -26,7 +26,7 @@ El workflow reutilizable genera automáticamente un comentario en cada PR con lo
 ```markdown
 ## 🔍 Semgrep Security Scan — Resultados
 
-**Repositorio**: `amazing-protection/frontend-app` | **Rama**: `feature/user-auth` | **Commit**: `a1b2c3d4` | **Fecha**: 2026-05-10 01:30 UTC
+**Repositorio**: `jgutierrezdtt/frontend-app` | **Rama**: `feature/user-auth` | **Commit**: `a1b2c3d4` | **Fecha**: 2026-05-10 01:30 UTC
 
 ### Estado: 🟠 BLOQUEADO — Vulnerabilidades Altas
 
@@ -104,7 +104,7 @@ jobs:
       - name: Generate dashboard
         env:
           GH_TOKEN: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
-          ORG: amazing-protection
+          ORG: jgutierrezdtt
         run: |
           python3 scripts/generate-org-report.py \
             --org "$ORG" \
@@ -114,7 +114,7 @@ jobs:
       - name: Commit updated dashboard
         run: |
           git config --global user.name "security-bot[bot]"
-          git config --global user.email "security-bot@amazing-protection.com"
+          git config --global user.email "security-bot@jgutierrezdtt.com"
           
           if git diff --quiet README.md; then
             echo "No changes to dashboard"
@@ -279,8 +279,8 @@ if __name__ == "__main__":
 # Un repositorio por línea (formato: org/repo)
 # Las líneas que empiezan con # son comentarios
 
-amazing-protection/security-platform
-amazing-protection/security-exceptions
+jgutierrezdtt/security-platform
+jgutierrezdtt/security-exceptions
 # Añadir más repos aquí cuando se incorporen al sistema
 ```
 
@@ -303,7 +303,7 @@ El workflow de Scorecard genera una puntuación de seguridad para cada repositor
 
 ```bash
 # Ver la puntuación actual del repo
-gh api repos/amazing-protection/security-platform/code-scanning/alerts \
+gh api repos/jgutierrezdtt/security-platform/code-scanning/alerts \
   --jq '[.[] | select(.tool.name == "scorecard")] | length'
 ```
 

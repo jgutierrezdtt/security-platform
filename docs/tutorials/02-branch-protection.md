@@ -23,7 +23,7 @@ Este tutorial cubre **ambos**, con énfasis en Rulesets por ser el estándar act
 ### 1.1 Proteger la rama `main` vía CLI
 
 ```bash
-gh api repos/amazing-protection/mi-repo/branches/main/protection \
+gh api repos/jgutierrezdtt/mi-repo/branches/main/protection \
   -X PUT \
   --field required_status_checks='{"strict":true,"contexts":["Semgrep SAST","Dependabot Status"]}' \
   --field enforce_admins=true \
@@ -66,7 +66,7 @@ Los Rulesets son la evolución de Branch Protection. Sus ventajas clave:
 ### 2.1 Crear un Ruleset para ramas de producción
 
 ```bash
-gh api repos/amazing-protection/mi-repo/rulesets \
+gh api repos/jgutierrezdtt/mi-repo/rulesets \
   -X POST \
   --input - << 'EOF'
 {
@@ -140,7 +140,7 @@ gh api repos/amazing-protection/mi-repo/rulesets \
         "name": "Corporate email",
         "negate": false,
         "operator": "ends_with",
-        "pattern": "@amazing-protection.com"
+        "pattern": "@jgutierrezdtt.com"
       }
     },
     {
@@ -162,7 +162,7 @@ EOF
 Para aplicar protecciones a TODOS los repositorios de la organización:
 
 ```bash
-gh api orgs/amazing-protection/rulesets \
+gh api orgs/jgutierrezdtt/rulesets \
   -X POST \
   --input - << 'EOF'
 {
@@ -219,7 +219,7 @@ EOF
 Las ramas de feature (`feature/**`) tienen reglas menos estrictas pero igualmente importantes:
 
 ```bash
-gh api repos/amazing-protection/mi-repo/rulesets \
+gh api repos/jgutierrezdtt/mi-repo/rulesets \
   -X POST \
   --input - << 'EOF'
 {
@@ -307,7 +307,7 @@ resource "github_repository_ruleset" "production_protection" {
 
 ```bash
 #!/usr/bin/env bash
-REPO="${1:-amazing-protection/mi-repo}"
+REPO="${1:-jgutierrezdtt/mi-repo}"
 BRANCH="${2:-main}"
 
 echo "=== Branch Protection: ${REPO}/${BRANCH} ==="

@@ -10,7 +10,7 @@
 
 No todos los hallazgos de Semgrep representan vulnerabilidades reales. Un **falso positivo** es un hallazgo que la herramienta reporta como problema, pero que en el contexto real del código no representa un riesgo de seguridad.
 
-El sistema de gestión de excepciones de `amazing-protection` está diseñado con estos principios:
+El sistema de gestión de excepciones de `jgutierrezdtt` está diseñado con estos principios:
 
 | Principio | Implementación |
 |-----------|---------------|
@@ -26,7 +26,7 @@ El sistema de gestión de excepciones de `amazing-protection` está diseñado co
 ## 1. Arquitectura del sistema de excepciones
 
 ```
-amazing-protection/security-exceptions (repo)
+jgutierrezdtt/security-exceptions (repo)
 │
 │ ← Solo security-team puede escribir
 │ ← Todos los repos pueden leer (con EXCEPTIONS_READER_TOKEN)
@@ -77,11 +77,11 @@ Si la respuesta es "no" a todas, **primero corrige el código**.
 
 ### Paso 3: Abrir un Issue en security-exceptions
 
-Ve a [amazing-protection/security-exceptions/issues/new?template=exception-request.yml](https://github.com/amazing-protection/security-exceptions/issues/new?template=exception-request.yml) y completa el formulario:
+Ve a [jgutierrezdtt/security-exceptions/issues/new?template=exception-request.yml](https://github.com/jgutierrezdtt/security-exceptions/issues/new?template=exception-request.yml) y completa el formulario:
 
 ```yaml
 # Información requerida en el issue:
-Repositorio afectado: amazing-protection/frontend-app
+Repositorio afectado: jgutierrezdtt/frontend-app
 Regla de Semgrep: sql-injection-string-concat
 Archivo y línea: src/db/queries.js:45
 Severidad: HIGH
@@ -112,7 +112,7 @@ Si se aprueba, el security-team añade la excepción al repositorio.
 # exceptions/global/false-positives.yml
 schema_version: "1.0"
 last_updated: "2026-05-10"
-updated_by: "@amazing-protection/security-team"
+updated_by: "@jgutierrezdtt/security-team"
 
 exceptions:
   # ─── Falso positivo conocido en pytest fixtures ──────────────
@@ -149,7 +149,7 @@ exceptions:
 ```yaml
 # exceptions/by-repo/frontend-app__frontend-app/exceptions.yml
 schema_version: "1.0"
-repository: "amazing-protection/frontend-app"
+repository: "jgutierrezdtt/frontend-app"
 last_updated: "2026-05-10"
 
 exceptions:
@@ -167,7 +167,7 @@ exceptions:
     approved_at: "2026-05-10"
     expires_at: "2026-11-10"           # 6 meses — revisión semestral
     ticket: "SEC-2026-042"             # Ticket en el sistema de tracking interno
-    pr_reference: "amazing-protection/security-exceptions#15"
+    pr_reference: "jgutierrezdtt/security-exceptions#15"
 
   - id: "EXC-FRONTEND-002"
     rule_id: "no-log-sensitive-data"
@@ -202,7 +202,7 @@ db.query(f"SELECT * FROM users WHERE id = {user_id}")
 eval(userInput)  // nosemgrep
 ```
 
-**Política de `nosemgrep` en amazing-protection:**
+**Política de `nosemgrep` en jgutierrezdtt:**
 1. Solo se permite con un comentario que explique **por qué**
 2. Debe incluir la **regla suprimida** explícitamente
 3. Los `nosemgrep` sin comentario son bloqueados por la regla `no-bare-nosemgrep`
@@ -247,7 +247,7 @@ EOF
 ## 6. Checklist
 
 - [ ] El proceso de solicitud de excepción está documentado para el equipo
-- [ ] Solo el `@amazing-protection/security-team` puede aprobar y añadir excepciones
+- [ ] Solo el `@jgutierrezdtt/security-team` puede aprobar y añadir excepciones
 - [ ] Cada excepción tiene **justificación técnica**, **aprobador** y **fecha de expiración**
 - [ ] El workflow de validación verifica el formato de las excepciones
 - [ ] Las excepciones caducadas se revisan en plazo (≤30 días)

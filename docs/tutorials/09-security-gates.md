@@ -10,7 +10,7 @@
 
 Un **Security Gate** es un punto de control automatizado en el pipeline de CI/CD que **bloquea el avance** del código si no cumple los estándares de seguridad definidos.
 
-En `amazing-protection`:
+En `jgutierrezdtt`:
 
 ```
 Commit → Tests → [SECURITY GATE] → Deploy
@@ -47,7 +47,7 @@ El security gate se puede configurar en modo `report-only` para:
 # Habilitar report-only para hotfixes
 jobs:
   semgrep:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
     with:
       report-only: ${{ contains(github.ref, 'hotfix/') }}
 ```
@@ -62,7 +62,7 @@ El security gate solo es efectivo si los status checks son **required** en la ra
 
 ```bash
 # Los nombres de los status checks deben coincidir EXACTAMENTE con los job names
-gh api repos/amazing-protection/mi-repo/branches/main/protection \
+gh api repos/jgutierrezdtt/mi-repo/branches/main/protection \
   -X PUT \
   --input - << 'EOF'
 {
@@ -91,7 +91,7 @@ EOF
 ### 2.2 Con Repository Rulesets (moderno)
 
 ```bash
-gh api repos/amazing-protection/mi-repo/rulesets \
+gh api repos/jgutierrezdtt/mi-repo/rulesets \
   -X POST \
   --input - << 'EOF'
 {
@@ -143,7 +143,7 @@ jobs:
   # ─── Gate 1: SAST con Semgrep ──────────────────────────────
   semgrep:
     name: Semgrep SAST          # ← Este nombre es el "context" en branch protection
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
     with:
       scan-scope: ${{ github.event_name == 'pull_request' && 'diff' || 'full' }}
       fail-on-severity: high
@@ -156,7 +156,7 @@ jobs:
   # ─── Gate 2: Dependencias vulnerables ─────────────────────
   dependabot:
     name: Dependabot Status     # ← Este nombre es el "context" en branch protection
-    uses: amazing-protection/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
     with:
       fail-on-critical: true
       fail-on-high: true
@@ -198,7 +198,7 @@ jobs:
             echo "Pasos para resolver:"
             echo "1. Revisa los hallazgos en los comentarios del PR"
             echo "2. Corrige las vulnerabilidades en el código"
-            echo "3. Si crees que es un falso positivo, abre un issue en amazing-protection/security-exceptions"
+            echo "3. Si crees que es un falso positivo, abre un issue en jgutierrezdtt/security-exceptions"
             echo "4. Los cambios en dependencias vulnerables deben actualizarse via Dependabot PRs"
             exit 1
           fi

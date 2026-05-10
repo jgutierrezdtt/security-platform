@@ -19,18 +19,18 @@ La protección de un repositorio va mucho más allá de la visibilidad pública/
 
 ```bash
 # Verificar visibilidad actual
-gh repo view amazing-protection/mi-repo --json visibility -q '.visibility'
+gh repo view jgutierrezdtt/mi-repo --json visibility -q '.visibility'
 
 # Cambiar a privado (acción irreversible sin confirmación)
-gh repo edit amazing-protection/mi-repo --visibility private
+gh repo edit jgutierrezdtt/mi-repo --visibility private
 ```
 
-> **Regla organizacional**: En `amazing-protection`, todos los repositorios son **privados** por defecto. Solo se crean repos públicos con aprobación explícita del CISO.
+> **Regla organizacional**: En `jgutierrezdtt`, todos los repositorios son **privados** por defecto. Solo se crean repos públicos con aprobación explícita del CISO.
 
 ### 1.2 Configurar como repositorio de plantilla (si aplica)
 
 ```bash
-gh repo edit amazing-protection/mi-repo --template
+gh repo edit jgutierrezdtt/mi-repo --template
 ```
 
 ---
@@ -43,7 +43,7 @@ GHAS es el paraguas de características de seguridad de GitHub. Para repositorio
 
 ```bash
 # Habilitar GHAS en el repositorio
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field security_and_analysis='{"advanced_security":{"status":"enabled"}}'
 ```
@@ -51,7 +51,7 @@ gh api repos/amazing-protection/mi-repo \
 ### 2.2 Verificar estado de GHAS
 
 ```bash
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   --jq '.security_and_analysis'
 ```
 
@@ -74,7 +74,7 @@ El secret scanning detecta secretos (tokens, claves API, contraseñas) que hayan
 ### 3.1 Habilitar secret scanning
 
 ```bash
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field security_and_analysis='{"secret_scanning":{"status":"enabled"}}'
 ```
@@ -84,7 +84,7 @@ gh api repos/amazing-protection/mi-repo \
 Push Protection **bloquea el push** si detecta un secreto conocido. Es la característica más valiosa porque previene el problema antes de que ocurra.
 
 ```bash
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field security_and_analysis='{"secret_scanning_push_protection":{"status":"enabled"}}'
 ```
@@ -93,7 +93,7 @@ gh api repos/amazing-protection/mi-repo \
 
 ```bash
 # Listar todas las alertas abiertas
-gh api repos/amazing-protection/mi-repo/secret-scanning/alerts \
+gh api repos/jgutierrezdtt/mi-repo/secret-scanning/alerts \
   --jq '.[] | {number:.number, secret_type:.secret_type, state:.state}'
 ```
 
@@ -121,7 +121,7 @@ Code Scanning integra herramientas SAST directamente en GitHub. Los resultados a
 
 ```bash
 # Configurar CodeQL con el conjunto de consultas de seguridad extendido
-gh api repos/amazing-protection/mi-repo/code-scanning/default-setup \
+gh api repos/jgutierrezdtt/mi-repo/code-scanning/default-setup \
   -X PATCH \
   --field state=configured \
   --field query_suite=security-extended \
@@ -136,11 +136,11 @@ El pipeline de Semgrep se configura a través del workflow reutilizable. Ver [Tu
 
 ```bash
 # Listar alertas abiertas
-gh api repos/amazing-protection/mi-repo/code-scanning/alerts \
+gh api repos/jgutierrezdtt/mi-repo/code-scanning/alerts \
   --jq '.[] | {number:.number, rule_id:.rule.id, severity:.rule.severity}'
 
 # Descartar una alerta como falso positivo
-gh api repos/amazing-protection/mi-repo/code-scanning/alerts/123 \
+gh api repos/jgutierrezdtt/mi-repo/code-scanning/alerts/123 \
   -X PATCH \
   --field state=dismissed \
   --field dismissed_reason=false_positive \
@@ -151,13 +151,13 @@ gh api repos/amazing-protection/mi-repo/code-scanning/alerts/123 \
 
 ## 5. Configuración de seguridad a nivel de organización
 
-Para mantener consistencia en todos los repositorios de `amazing-protection`:
+Para mantener consistencia en todos los repositorios de `jgutierrezdtt`:
 
 ### 5.1 Habilitar GHAS en toda la organización
 
 ```bash
 # Habilitar para todos los repos de la organización
-gh api orgs/amazing-protection/settings/security_products \
+gh api orgs/jgutierrezdtt/settings/security_products \
   -X POST \
   --field query_suite=security-extended \
   --field configuration='{
@@ -190,7 +190,7 @@ PVR permite a investigadores de seguridad reportar vulnerabilidades de forma pri
 
 ```bash
 # Habilitar PVR
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field private_vulnerability_reporting_enabled=true
 ```
@@ -205,7 +205,7 @@ Una vez habilitado, crea un archivo `SECURITY.md` explicando el proceso:
 Please use GitHub's private vulnerability reporting feature to report security issues.
 Do NOT open public issues for security vulnerabilities.
 
-[Report a vulnerability](https://github.com/amazing-protection/mi-repo/security/advisories/new)
+[Report a vulnerability](https://github.com/jgutierrezdtt/mi-repo/security/advisories/new)
 ```
 
 ---
@@ -216,7 +216,7 @@ Ejecuta este script para verificar el estado de un repositorio:
 
 ```bash
 #!/usr/bin/env bash
-REPO="${1:-amazing-protection/mi-repo}"
+REPO="${1:-jgutierrezdtt/mi-repo}"
 
 echo "=== Security Status: ${REPO} ==="
 

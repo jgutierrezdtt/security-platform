@@ -31,14 +31,14 @@ Dependabot es el sistema de gestión de dependencias de GitHub. Tiene tres compo
 
 ```bash
 # Habilitar alerts y security updates
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field security_and_analysis='{
     "dependabot_security_updates": {"status": "enabled"}
   }'
 
 # Verificar estado
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   --jq '.security_and_analysis.dependabot_security_updates'
 ```
 
@@ -46,12 +46,12 @@ gh api repos/amazing-protection/mi-repo \
 
 ```bash
 # Para todos los repos de la org
-gh api orgs/amazing-protection \
+gh api orgs/jgutierrezdtt \
   -X PATCH \
   --field default_repository_permission=none
 
 # Configurar política de Dependabot para la org
-gh api orgs/amazing-protection/dependabot/alerts \
+gh api orgs/jgutierrezdtt/dependabot/alerts \
   --jq '.[0:5]'
 ```
 
@@ -201,7 +201,7 @@ updates:
 
 ```bash
 #!/usr/bin/env bash
-REPO="${1:-amazing-protection/mi-repo}"
+REPO="${1:-jgutierrezdtt/mi-repo}"
 
 echo "=== Dependabot Alerts: ${REPO} ==="
 
@@ -233,7 +233,7 @@ gh api "repos/${REPO}/dependabot/alerts?state=open&severity=critical,high&per_pa
 
 ```bash
 gh pr list \
-  --repo amazing-protection/mi-repo \
+  --repo jgutierrezdtt/mi-repo \
   --author app/dependabot \
   --json number,title,createdAt,labels \
   --jq '.[] | {number:.number, title:.title, age:.createdAt}'
@@ -243,7 +243,7 @@ gh pr list \
 
 ## 4. Política de gestión de alertas Dependabot
 
-### 4.1 SLA recomendado para amazing-protection
+### 4.1 SLA recomendado para jgutierrezdtt
 
 | Severidad | SLA de remediación |
 |-----------|-------------------|
@@ -272,7 +272,7 @@ El workflow `reusable/dependabot-check.yml` verifica el estado de Dependabot en 
 # En tu repo consumer — .github/workflows/security.yml
 jobs:
   dependabot-check:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
     with:
       fail-on-critical: true   # Bloquear PR si hay alertas críticas sin resolver
       fail-on-high: true       # Bloquear PR si hay alertas altas sin resolver
@@ -294,7 +294,7 @@ Si una alerta no es explotable en tu contexto:
 
 ```bash
 # Marcar alerta como "not exploitable" con comentario
-gh api repos/amazing-protection/mi-repo/dependabot/alerts/123 \
+gh api repos/jgutierrezdtt/mi-repo/dependabot/alerts/123 \
   -X PATCH \
   --field state=dismissed \
   --field dismissed_reason=not_used \

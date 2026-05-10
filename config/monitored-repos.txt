@@ -1,4 +1,4 @@
-amazing-protection/security-platform
-amazing-protection/security-exceptions
+jgutierrezdtt/security-platform
+jgutierrezdtt/security-exceptions
 # Añadir repos aquí cuando se incorporen al sistema:
-# amazing-protection/nombre-repo
+# jgutierrezdtt/nombre-repo

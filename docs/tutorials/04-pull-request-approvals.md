@@ -18,22 +18,22 @@ CODEOWNERS define qué equipos o personas deben aprobar cambios en partes espec�
 # Sintaxis: <patrón>  <propietario1> <propietario2>
 
 # Por defecto, el security-team aprueba todo
-*                          @amazing-protection/security-team
+*                          @jgutierrezdtt/security-team
 
 # Workflows de seguridad — doble aprobación
-.github/workflows/         @amazing-protection/security-team @amazing-protection/platform-team
+.github/workflows/         @jgutierrezdtt/security-team @jgutierrezdtt/platform-team
 
 # Configuración de Semgrep — solo security-team
-config/semgrep/            @amazing-protection/security-team
+config/semgrep/            @jgutierrezdtt/security-team
 
 # Documentación — el platform-team puede aprobar
-docs/                      @amazing-protection/platform-team @amazing-protection/security-team
+docs/                      @jgutierrezdtt/platform-team @jgutierrezdtt/security-team
 
 # Templates — platform-team con revisión de security
-templates/                 @amazing-protection/platform-team @amazing-protection/security-team
+templates/                 @jgutierrezdtt/platform-team @jgutierrezdtt/security-team
 
 # Scripts de infraestructura
-scripts/                   @amazing-protection/platform-team
+scripts/                   @jgutierrezdtt/platform-team
 ```
 
 ### 1.2 Reglas de CODEOWNERS
@@ -47,7 +47,7 @@ scripts/                   @amazing-protection/platform-team
 
 ```bash
 # Ver quién es dueño de un archivo específico
-gh api repos/amazing-protection/security-platform/codeowners/errors \
+gh api repos/jgutierrezdtt/security-platform/codeowners/errors \
   --jq '.errors[]'
 ```
 
@@ -175,7 +175,7 @@ Los Draft PRs permiten trabajo en progreso sin solicitar review. **Política rec
 La Merge Queue valida que múltiples PRs funcionan juntos antes de mergear:
 
 ```bash
-gh api repos/amazing-protection/mi-repo \
+gh api repos/jgutierrezdtt/mi-repo \
   -X PATCH \
   --field merge_queue='{
     "enabled": true,
@@ -232,8 +232,8 @@ Para cambios de alta sensibilidad (modificaciones a workflows, config de Semgrep
 ```yaml
 # CODEOWNERS — Dual control para archivos críticos
 # Requiere aprobación de DOS personas distintas del security-team
-.github/workflows/reusable/   @amazing-protection/security-team
-config/semgrep/               @amazing-protection/security-team
+.github/workflows/reusable/   @jgutierrezdtt/security-team
+config/semgrep/               @jgutierrezdtt/security-team
 ```
 
 Con `required_approving_review_count: 2` en branch protection, si el security-team tiene ≥2 miembros, ambos deben aprobar.

@@ -36,7 +36,7 @@ jobs:
       - name: Generate org security report
         env:
           GH_TOKEN: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
-          ORG: "amazing-protection"
+          ORG: "jgutierrezdtt"
         run: |
           python3 scripts/generate-org-report.py \
             --repos-file config/monitored-repos.txt \

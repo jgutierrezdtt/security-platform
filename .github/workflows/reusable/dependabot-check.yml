@@ -191,7 +191,7 @@ jobs:
               report_lines += [
                   "### ❌ Dependabot no está habilitado",
                   "",
-                  "Para habilitarlo, sigue el tutorial: [Activación de Dependabot](https://github.com/amazing-protection/security-platform/blob/main/docs/tutorials/06-dependabot-activation.md)",
+                  "Para habilitarlo, sigue el tutorial: [Activación de Dependabot](https://github.com/jgutierrezdtt/security-platform/blob/main/docs/tutorials/06-dependabot-activation.md)",
                   ""
               ]
           elif packages_affected:

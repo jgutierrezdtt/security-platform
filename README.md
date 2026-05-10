@@ -5,19 +5,22 @@
 
 ---
 
-## Índice de tutoriales
+## Indice de tutoriales
 
-| # | Tutorial | Descripción |
-|---|----------|-------------|| 00 | [Referencia del sistema](docs/tutorials/00-system-reference.md) | Cuando se ejecuta cada proceso, diagramas de flujo, SLSA y como se reportan los resultados || 01 | [Protección de Repositorios](docs/tutorials/01-repository-protection.md) | Configuración de visibilidad, GHAS, secret scanning y push protection |
-| 02 | [Protección de Ramas](docs/tutorials/02-branch-protection.md) | Branch protection rules, rulesets y configuración avanzada |
-| 03 | [Roles y Permisos](docs/tutorials/03-roles-and-permissions.md) | GitHub roles, teams y permisos granulares en la organización |
-| 04 | [Aprobación de Pull Requests](docs/tutorials/04-pull-request-approvals.md) | CODEOWNERS, required reviews y procesos de aprobación |
-| 05 | [SLSA en Pipelines](docs/tutorials/05-slsa-pipelines.md) | Supply chain integrity con SLSA Level 3 usando el workflow oficial |
-| 06 | [Activación de Dependabot](docs/tutorials/06-dependabot-activation.md) | Dependabot alerts, security updates y version updates |
-| 07 | [Activación de Semgrep](docs/tutorials/07-semgrep-activation.md) | Integración de Semgrep, SARIF, Code Scanning y gestión de reglas |
-| 08 | [Gestión de Excepciones](docs/tutorials/08-exception-management.md) | Falsos positivos, excepciones y flujo de aprobación |
-| 09 | [Security Gates](docs/tutorials/09-security-gates.md) | Bloqueo de PRs por vulnerabilidades críticas y altas |
-| 10 | [Reporting de Seguridad](docs/tutorials/10-reporting.md) | Dashboards, tablas visuales en Actions y reportes automáticos |
+| Tutorial | Descripcion |
+|----------|-------------|
+| [Mi PR esta bloqueado — que hago](docs/tutorials/pr-blocked-guide.md) | Guia rapida para developers: leer el reporte, corregir hallazgos o solicitar una excepcion |
+| [00 — Referencia del sistema](docs/tutorials/00-system-reference.md) | Cuando se ejecuta cada proceso, diagramas de flujo, SLSA y canales de reporte |
+| [01 — Proteccion de Repositorios](docs/tutorials/01-repository-protection.md) | Visibilidad, GHAS, secret scanning y push protection |
+| [02 — Proteccion de Ramas](docs/tutorials/02-branch-protection.md) | Branch protection rules, rulesets y configuracion avanzada |
+| [03 — Roles y Permisos](docs/tutorials/03-roles-and-permissions.md) | GitHub roles, teams y permisos granulares en la organizacion |
+| [04 — Aprobacion de Pull Requests](docs/tutorials/04-pull-request-approvals.md) | CODEOWNERS, required reviews y procesos de aprobacion |
+| [05 — SLSA en Pipelines](docs/tutorials/05-slsa-pipelines.md) | Supply chain integrity con SLSA Level 3 |
+| [06 — Activacion de Dependabot](docs/tutorials/06-dependabot-activation.md) | Dependabot alerts, security updates y version updates |
+| [07 — Activacion de Semgrep](docs/tutorials/07-semgrep-activation.md) | Integracion SARIF, Code Scanning y gestion de reglas |
+| [08 — Gestion de Excepciones](docs/tutorials/08-exception-management.md) | Falsos positivos, excepciones y flujo de aprobacion |
+| [09 — Security Gates](docs/tutorials/09-security-gates.md) | Bloqueo de PRs por vulnerabilidades criticas y altas |
+| [10 — Reporting de Seguridad](docs/tutorials/10-reporting.md) | Dashboards, Job Summaries y reportes automaticos |
 
 ---
 

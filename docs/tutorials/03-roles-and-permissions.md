@@ -33,36 +33,36 @@ Organización
 
 ---
 
-## 2. Estructura de Teams recomendada para amazing-protection
+## 2. Estructura de Teams recomendada para jgutierrezdtt
 
 ```
-amazing-protection (org)
-├── @amazing-protection/security-team        → Admin en security-platform y exceptions
-├── @amazing-protection/platform-team        → Maintain en security-platform
-├── @amazing-protection/developers           → Write en repos de desarrollo
-├── @amazing-protection/leads               → Maintain en sus repos
-└── @amazing-protection/external-reviewers  → Read en repos seleccionados
+jgutierrezdtt (org)
+├── @jgutierrezdtt/security-team        → Admin en security-platform y exceptions
+├── @jgutierrezdtt/platform-team        → Maintain en security-platform
+├── @jgutierrezdtt/developers           → Write en repos de desarrollo
+├── @jgutierrezdtt/leads               → Maintain en sus repos
+└── @jgutierrezdtt/external-reviewers  → Read en repos seleccionados
 ```
 
 ### 2.1 Crear los teams
 
 ```bash
 # Team de seguridad (private — solo visible para miembros)
-gh api orgs/amazing-protection/teams \
+gh api orgs/jgutierrezdtt/teams \
   -X POST \
   --field name="security-team" \
   --field description="Equipo de seguridad - gestiona políticas y excepciones" \
   --field privacy="secret"
 
 # Team de plataforma
-gh api orgs/amazing-protection/teams \
+gh api orgs/jgutierrezdtt/teams \
   -X POST \
   --field name="platform-team" \
   --field description="Ingeniería de plataforma - mantiene las pipelines centrales" \
   --field privacy="closed"
 
 # Team de desarrolladores (base)
-gh api orgs/amazing-protection/teams \
+gh api orgs/jgutierrezdtt/teams \
   -X POST \
   --field name="developers" \
   --field description="Todos los desarrolladores de la organización" \
@@ -73,23 +73,23 @@ gh api orgs/amazing-protection/teams \
 
 ```bash
 # security-team → Admin en security-platform
-gh api orgs/amazing-protection/teams/security-team/repos/amazing-protection/security-platform \
+gh api orgs/jgutierrezdtt/teams/security-team/repos/jgutierrezdtt/security-platform \
   -X PUT --field permission=admin
 
 # security-team → Admin en security-exceptions (con control exclusivo)
-gh api orgs/amazing-protection/teams/security-team/repos/amazing-protection/security-exceptions \
+gh api orgs/jgutierrezdtt/teams/security-team/repos/jgutierrezdtt/security-exceptions \
   -X PUT --field permission=admin
 
 # platform-team → Maintain en security-platform
-gh api orgs/amazing-protection/teams/platform-team/repos/amazing-protection/security-platform \
+gh api orgs/jgutierrezdtt/teams/platform-team/repos/jgutierrezdtt/security-platform \
   -X PUT --field permission=maintain
 
 # developers → Read en security-exceptions (solo consulta)
-gh api orgs/amazing-protection/teams/developers/repos/amazing-protection/security-exceptions \
+gh api orgs/jgutierrezdtt/teams/developers/repos/jgutierrezdtt/security-exceptions \
   -X PUT --field permission=pull
 
 # developers → Read en security-platform (para consultar docs y templates)
-gh api orgs/amazing-protection/teams/developers/repos/amazing-protection/security-platform \
+gh api orgs/jgutierrezdtt/teams/developers/repos/jgutierrezdtt/security-platform \
   -X PUT --field permission=pull
 ```
 
@@ -101,7 +101,7 @@ Para organizaciones con GitHub Enterprise, puedes crear roles con permisos granu
 
 ```bash
 # Crear rol "Security Reviewer" — puede ver alertas pero no modificar código
-gh api orgs/amazing-protection/custom_roles \
+gh api orgs/jgutierrezdtt/custom_roles \
   -X POST \
   --input - << 'EOF'
 {
@@ -149,7 +149,7 @@ Para organizaciones grandes, usa una GitHub App en lugar de PATs:
 
 ```bash
 # Registrar la app via API
-gh api orgs/amazing-protection/installations \
+gh api orgs/jgutierrezdtt/installations \
   --jq '.[].app_slug'
 ```
 
@@ -173,7 +173,7 @@ Los workflows de GitHub Actions deben declarar permisos explícitamente:
 # En el workflow llamante (consumer)
 jobs:
   semgrep:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
     # Nunca dar permisos extras. Los reusable workflows solo pueden usar lo que declaran.
     secrets:
       EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
@@ -200,19 +200,19 @@ jobs:
 
 ```bash
 # Configurar que los nuevos miembros tengan rol "member" (no owner)
-gh api orgs/amazing-protection \
+gh api orgs/jgutierrezdtt \
   -X PATCH \
   --field default_repository_permission=none \
   --field members_can_create_repositories=false \
   --field members_can_create_private_repositories=false
 ```
 
-> En amazing-protection, **ningún desarrollador tiene permisos por defecto**. Solo los que pertenecen a los teams configurados.
+> En jgutierrezdtt, **ningún desarrollador tiene permisos por defecto**. Solo los que pertenecen a los teams configurados.
 
 ### 6.2 Requerir 2FA en toda la organización
 
 ```bash
-gh api orgs/amazing-protection \
+gh api orgs/jgutierrezdtt \
   -X PATCH \
   --field two_factor_requirement_enabled=true
 ```
@@ -222,20 +222,20 @@ gh api orgs/amazing-protection \
 ```bash
 #!/usr/bin/env bash
 echo "=== Miembros con rol Owner ==="
-gh api orgs/amazing-protection/members?role=owner \
+gh api orgs/jgutierrezdtt/members?role=owner \
   --jq '.[].login'
 
 echo ""
 echo "=== Colaboradores externos ==="
-gh api orgs/amazing-protection/outside_collaborators \
+gh api orgs/jgutierrezdtt/outside_collaborators \
   --jq '.[].login'
 
 echo ""
 echo "=== Teams y sus miembros ==="
-gh api orgs/amazing-protection/teams \
+gh api orgs/jgutierrezdtt/teams \
   --jq '.[] | .name' | while read team; do
     echo "--- ${team} ---"
-    gh api "orgs/amazing-protection/teams/${team}/members" --jq '.[].login'
+    gh api "orgs/jgutierrezdtt/teams/${team}/members" --jq '.[].login'
   done
 ```
 
@@ -247,7 +247,7 @@ Para colaboradores externos (contratistas, auditores):
 
 ```bash
 # Añadir colaborador con permisos de Read
-gh api repos/amazing-protection/mi-repo/collaborators/username-externo \
+gh api repos/jgutierrezdtt/mi-repo/collaborators/username-externo \
   -X PUT \
   --field permission=pull
 

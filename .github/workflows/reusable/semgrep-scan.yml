@@ -25,7 +25,7 @@ on:
       exceptions-repo:
         description: "Repositorio de excepciones aprobadas (org/repo)"
         type: string
-        default: "amazing-protection/security-exceptions"
+        default: "jgutierrezdtt/security-exceptions"
       semgrep-rules:
         description: "Reglas Semgrep adicionales (p/ej: p/owasp-top-ten p/ci)"
         type: string
@@ -355,9 +355,10 @@ jobs:
               lines.append("")
               lines.append(f"> ⚠️ **{len(errors)} errores** durante el análisis. Algunos archivos podrían no haberse analizado.")
 
-          markdown_report = "\n".join(lines)
+          lines.append("")
+          lines.append("---")
+          lines.append("*Tu PR está bloqueado? Consulta la [guía paso a paso](https://github.com/jgutierrezdtt/security-platform/blob/main/docs/tutorials/pr-blocked-guide.md) — explica cómo corregir cada tipo de hallazgo o solicitar una excepción.*")
 
-          # Guardar para el siguiente paso
           with open(".security/report.md", "w") as f:
               f.write(markdown_report)
 
@@ -458,7 +459,7 @@ jobs:
 
           ### Falso positivo?
           Si crees que esto es un falso positivo, abre una solicitud de excepción en:
-          `amazing-protection/security-exceptions`
+          `jgutierrezdtt/security-exceptions`
 
           ---
           *Generado automáticamente por el pipeline de Semgrep.*

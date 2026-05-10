@@ -81,7 +81,7 @@ permissions:
 jobs:
   release:
     name: Build & Publish
-    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
     permissions:
       # Estos permisos son necesarios para el job de provenance
       actions: read
@@ -112,7 +112,7 @@ permissions:
 
 jobs:
   build-linux-amd64:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
     permissions:
       actions: read
       id-token: write
@@ -126,7 +126,7 @@ jobs:
       go-version: "1.22"
 
   build-linux-arm64:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
     permissions:
       actions: read
       id-token: write
@@ -140,7 +140,7 @@ jobs:
       go-version: "1.22"
 
   build-windows:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
     permissions:
       actions: read
       id-token: write
@@ -178,13 +178,13 @@ go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
 ```bash
 # Descargar artefacto y provenance del release
 gh release download v1.2.3 \
-  --repo amazing-protection/mi-repo \
+  --repo jgutierrezdtt/mi-repo \
   --pattern "myapp-linux-amd64*"
 
 # Verificar
 slsa-verifier verify-artifact \
   --provenance-path myapp-linux-amd64.intoto.jsonl \
-  --source-uri github.com/amazing-protection/mi-repo \
+  --source-uri github.com/jgutierrezdtt/mi-repo \
   --source-tag v1.2.3 \
   myapp-linux-amd64
 
@@ -200,7 +200,7 @@ slsa-verifier verify-artifact \
   run: |
     slsa-verifier verify-artifact \
       --provenance-path "${{ env.ARTIFACT_NAME }}.intoto.jsonl" \
-      --source-uri "github.com/amazing-protection/mi-repo" \
+      --source-uri "github.com/jgutierrezdtt/mi-repo" \
       --source-tag "${{ env.RELEASE_TAG }}" \
       "${{ env.ARTIFACT_NAME }}"
 ```
@@ -241,7 +241,7 @@ Ejemplo de provenance decodificado:
     "buildType": "https://github.com/slsa-framework/slsa-github-generator/generic@v1",
     "invocation": {
       "configSource": {
-        "uri": "git+https://github.com/amazing-protection/mi-repo@refs/tags/v1.2.3",
+        "uri": "git+https://github.com/jgutierrezdtt/mi-repo@refs/tags/v1.2.3",
         "digest": { "sha1": "deadbeef..." },
         "entryPoint": ".github/workflows/release.yml"
       }
@@ -282,7 +282,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ghcr.io/amazing-protection/mi-app:${{ github.sha }}
+          tags: ghcr.io/jgutierrezdtt/mi-app:${{ github.sha }}
 
   provenance:
     needs: [build]

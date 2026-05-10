@@ -49,7 +49,7 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep SAST
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
     with:
       scan-scope: ${{ github.event_name == 'pull_request' && 'diff' || 'full' }}
       fail-on-severity: high
@@ -64,13 +64,13 @@ jobs:
 ```yaml
 jobs:
   semgrep:
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
     with:
       scan-scope: diff                  # Solo cambios del PR (más rápido)
       fail-on-severity: high            # Bloquear en críticas y altas
       upload-sarif: true                # Subir al Security tab de GitHub
       create-issues: false              # No crear issues automáticamente
-      exceptions-repo: amazing-protection/security-exceptions
+      exceptions-repo: jgutierrezdtt/security-exceptions
       semgrep-rules: >-
         p/default
         p/security-audit
@@ -232,7 +232,7 @@ La versión cloud de Semgrep ofrece:
 1. Accede a [semgrep.dev](https://semgrep.dev) y crea una cuenta de organización
 2. Ve a **Settings** → **API Tokens**
 3. Crea un token con permisos `Agent (CI) Token`
-4. Añade el token como secret: `gh secret set SEMGREP_APP_TOKEN --repo amazing-protection/mi-repo`
+4. Añade el token como secret: `gh secret set SEMGREP_APP_TOKEN --repo jgutierrezdtt/mi-repo`
 
 ### 3.2 Configurar reglas en la plataforma
 
@@ -263,7 +263,7 @@ Los repos consumidores apuntan a estas reglas remotas:
 ```bash
 # Ejecutar con reglas del repositorio central
 semgrep scan \
-  --config https://raw.githubusercontent.com/amazing-protection/security-platform/main/config/semgrep/rules.yml \
+  --config https://raw.githubusercontent.com/jgutierrezdtt/security-platform/main/config/semgrep/rules.yml \
   .
 ```
 
@@ -281,11 +281,11 @@ Repositorio → Security → Code scanning alerts
 
 ```bash
 # Ver todas las alertas abiertas
-gh api repos/amazing-protection/mi-repo/code-scanning/alerts?state=open \
+gh api repos/jgutierrezdtt/mi-repo/code-scanning/alerts?state=open \
   --jq '.[] | {number:.number, rule:.rule.id, severity:.rule.security_severity_level, file:.most_recent_instance.location.path}'
 
 # Descartar una alerta como falso positivo
-gh api repos/amazing-protection/mi-repo/code-scanning/alerts/42 \
+gh api repos/jgutierrezdtt/mi-repo/code-scanning/alerts/42 \
   -X PATCH \
   --field state=dismissed \
   --field dismissed_reason=false_positive \
@@ -301,7 +301,7 @@ El workflow reutilizable genera automáticamente una tabla en el PR. Ejemplo de 
 ```
 ## 🔍 Semgrep Security Scan — Resultados
 
-**Repositorio**: `amazing-protection/mi-repo` | **Rama**: `feature/login` | **Commit**: `a1b2c3d4`
+**Repositorio**: `jgutierrezdtt/mi-repo` | **Rama**: `feature/login` | **Commit**: `a1b2c3d4`
 
 ### Estado: 🟠 BLOQUEADO — Vulnerabilidades Altas
 
