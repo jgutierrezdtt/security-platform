@@ -1,0 +1,45 @@
+name: Release with SLSA L3
+
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE: Copia este archivo a .github/workflows/release.yml
+# en tu repositorio y ajusta los parámetros.
+#
+# Genera un artefacto de release con provenance SLSA Level 3.
+# ─────────────────────────────────────────────────────────────────
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build & Release
+    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    permissions:
+      actions: read
+      id-token: write    # Requerido para firma OIDC (SLSA L3)
+      contents: write    # Para subir al release
+    with:
+      # Nombre del artefacto que se subirá al release
+      artifact-name: "mi-app-linux-amd64"
+
+      # Ruta donde el build-command genera el artefacto
+      artifact-path: "dist/mi-app"
+
+      # Comando de build (ajustar según el lenguaje/framework)
+      # Ejemplos:
+      #   Go:     "go build -o dist/mi-app ./cmd/mi-app"
+      #   Node:   "npm run build && cp build/mi-app dist/mi-app"
+      #   Python: "pyinstaller --onefile src/main.py -n mi-app && cp dist/mi-app dist/mi-app"
+      build-command: "go build -ldflags='-s -w' -o dist/mi-app ./cmd/mi-app"
+
+      # Versión del runtime (comentar/descomentar según lenguaje)
+      go-version: "1.22"
+      # node-version: "20"
+      # python-version: "3.12"
+
+      # Subir artefacto + provenance al GitHub Release
+      upload-assets: true

@@ -1,0 +1,66 @@
+name: Org Security Report
+
+on:
+  schedule:
+    # Cada domingo a las 07:00 UTC
+    - cron: "0 7 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Generar el reporte sin hacer commit"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  security-events: read
+
+jobs:
+  generate-report:
+    name: Generate Org Security Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Generate org security report
+        env:
+          GH_TOKEN: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
+          ORG: "amazing-protection"
+        run: |
+          python3 scripts/generate-org-report.py \
+            --repos-file config/monitored-repos.txt \
+            --output .security/dashboard.json \
+            --readme README.md
+
+      - name: Commit report update
+        if: ${{ !inputs.dry-run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet README.md; then
+            echo "No hay cambios en el dashboard"
+          else
+            git add README.md .security/
+            git commit -m "docs: update security dashboard [skip ci]"
+            git push
+            echo "✅ Dashboard actualizado"
+          fi
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-dashboard-${{ github.run_number }}
+          path: .security/dashboard.json
+          retention-days: 90

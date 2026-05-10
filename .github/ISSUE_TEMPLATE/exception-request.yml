@@ -1,0 +1,119 @@
+name: Exception Request
+description: Solicitar una excepción para un hallazgo de Semgrep (falso positivo o riesgo aceptado)
+title: "[Exception Request] <Regla> en <Repositorio>"
+labels:
+  - "exception-request"
+  - "pending-review"
+assignees:
+  - "" # Se asignará automáticamente al security-team
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Solicitud de Excepción de Seguridad
+
+        Antes de completar este formulario, confirma que:
+        1. ✅ Has analizado el hallazgo y entiendes por qué ocurre
+        2. ✅ Has intentado corregir el código y no es posible o práctico
+        3. ✅ Tienes una justificación técnica sólida para la excepción
+        4. ✅ Entiendes que el security-team revisará y puede rechazar la solicitud
+
+  - type: input
+    id: repository
+    attributes:
+      label: Repositorio afectado
+      description: Nombre completo del repositorio (org/repo)
+      placeholder: "amazing-protection/mi-repo"
+    validations:
+      required: true
+
+  - type: input
+    id: rule-id
+    attributes:
+      label: ID de la regla de Semgrep
+      description: El check_id que aparece en el comentario del PR
+      placeholder: "sql-injection-string-concat"
+    validations:
+      required: true
+
+  - type: input
+    id: file-path
+    attributes:
+      label: Archivo y línea
+      description: Ruta al archivo y número de línea del hallazgo
+      placeholder: "src/db/queries.js:45"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidad del hallazgo
+      options:
+        - CRITICAL
+        - HIGH
+        - MEDIUM
+        - LOW
+    validations:
+      required: true
+
+  - type: dropdown
+    id: exception-type
+    attributes:
+      label: Tipo de excepción
+      description: ¿Por qué consideras que no es una vulnerabilidad real?
+      options:
+        - "false_positive — El hallazgo es incorrecto técnicamente"
+        - "not_used — El código vulnerable no es accesible en producción"
+        - "accepted_risk — Es un riesgo real pero aceptado explícitamente"
+        - "test_code — Es código de test que nunca va a producción"
+        - "generated_code — Es código generado automáticamente que no puedo modificar"
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Justificación técnica
+      description: |
+        Explica técnicamente por qué este hallazgo no representa un riesgo real.
+        Incluye referencias a otros archivos del código que demuestren tu argumento
+        (p.ej: "el input es casteado a int en middleware/auth.js:23").
+      placeholder: |
+        El parámetro `userId` es validado y casteado a integer en el middleware
+        de autenticación (src/middleware/auth.js:23, función `validateUserId`).
+        En este punto de ejecución, el valor SIEMPRE es un entero válido,
+        por lo que no es posible una inyección SQL.
+    validations:
+      required: true
+
+  - type: input
+    id: expiry-date
+    attributes:
+      label: Fecha de expiración propuesta
+      description: La excepción debe revisarse periódicamente. Máximo 1 año.
+      placeholder: "2027-05-10"
+    validations:
+      required: true
+
+  - type: input
+    id: pr-reference
+    attributes:
+      label: PR donde aparece el hallazgo
+      description: URL del Pull Request donde Semgrep reportó el hallazgo
+      placeholder: "https://github.com/amazing-protection/mi-repo/pull/42"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmación
+      options:
+        - label: He leído y entiendo la [política de excepciones](https://github.com/amazing-protection/security-platform/blob/main/docs/tutorials/08-exception-management.md)
+          required: true
+        - label: La justificación que proporciono es técnicamente correcta y verificable en el código
+          required: true
+        - label: Entiendo que el security-team puede requerir cambios en el código antes de aprobar
+          required: true

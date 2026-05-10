@@ -1,0 +1,286 @@
+name: Reusable — Dependabot Status Check
+
+on:
+  workflow_call:
+    inputs:
+      fail-on-critical:
+        description: "Fallar el pipeline si hay alertas críticas abiertas de Dependabot"
+        type: boolean
+        default: true
+      fail-on-high:
+        description: "Fallar el pipeline si hay alertas altas abiertas de Dependabot"
+        type: boolean
+        default: true
+      max-critical:
+        description: "Número máximo de alertas críticas permitidas antes de fallar"
+        type: number
+        default: 0
+      max-high:
+        description: "Número máximo de alertas altas permitidas antes de fallar"
+        type: number
+        default: 0
+      check-dependabot-enabled:
+        description: "Verificar que Dependabot esté habilitado en el repositorio"
+        type: boolean
+        default: true
+      report-only:
+        description: "Solo reportar, sin bloquear el pipeline"
+        type: boolean
+        default: false
+
+    secrets:
+      DEPENDABOT_CHECK_TOKEN:
+        description: |
+          Fine-grained PAT con permisos:
+          - Repository: Dependabot alerts (read)
+          - Repository: Contents (read)
+        required: true
+
+    outputs:
+      dependabot-enabled:
+        description: "true si Dependabot está habilitado"
+        value: ${{ jobs.check.outputs.dependabot-enabled }}
+      critical-alerts:
+        description: "Número de alertas críticas abiertas"
+        value: ${{ jobs.check.outputs.critical-alerts }}
+      high-alerts:
+        description: "Número de alertas altas abiertas"
+        value: ${{ jobs.check.outputs.high-alerts }}
+      total-alerts:
+        description: "Número total de alertas abiertas"
+        value: ${{ jobs.check.outputs.total-alerts }}
+
+jobs:
+  check:
+    name: Dependabot Security Check
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    outputs:
+      dependabot-enabled: ${{ steps.check-alerts.outputs.dependabot-enabled }}
+      critical-alerts: ${{ steps.check-alerts.outputs.critical-alerts }}
+      high-alerts: ${{ steps.check-alerts.outputs.high-alerts }}
+      total-alerts: ${{ steps.check-alerts.outputs.total-alerts }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ─────────────────────────────────────────────
+      # 1. Verificar que dependabot.yml existe
+      # ─────────────────────────────────────────────
+      - name: Check dependabot.yml exists
+        id: check-config-file
+        run: |
+          if [[ -f ".github/dependabot.yml" ]]; then
+            echo "✅ .github/dependabot.yml encontrado"
+            echo "config-exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "❌ .github/dependabot.yml NO encontrado"
+            echo "config-exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ─────────────────────────────────────────────
+      # 2. Consultar alertas vía GitHub API
+      # ─────────────────────────────────────────────
+      - name: Fetch Dependabot alerts
+        id: check-alerts
+        env:
+          DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}
+          REPO: ${{ github.repository }}
+          FAIL_ON_CRITICAL: ${{ inputs.fail-on-critical }}
+          FAIL_ON_HIGH: ${{ inputs.fail-on-high }}
+          MAX_CRITICAL: ${{ inputs.max-critical }}
+          MAX_HIGH: ${{ inputs.max-high }}
+          REPORT_ONLY: ${{ inputs.report-only }}
+        run: |
+          python3 << 'PYTHON'
+          import os
+          import sys
+          import json
+          import urllib.request
+          import urllib.error
+
+          TOKEN = os.environ["DEPENDABOT_CHECK_TOKEN"]
+          REPO = os.environ["REPO"]
+          FAIL_ON_CRITICAL = os.environ.get("FAIL_ON_CRITICAL", "true").lower() == "true"
+          FAIL_ON_HIGH = os.environ.get("FAIL_ON_HIGH", "true").lower() == "true"
+          MAX_CRITICAL = int(os.environ.get("MAX_CRITICAL", "0"))
+          MAX_HIGH = int(os.environ.get("MAX_HIGH", "0"))
+          REPORT_ONLY = os.environ.get("REPORT_ONLY", "false").lower() == "true"
+
+          SEVERITY_EMOJI = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵", "unknown": "⚪"}
+
+          def gh_api(path, token):
+              req = urllib.request.Request(
+                  f"https://api.github.com{path}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28"
+                  }
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return json.loads(r.read()), r.status
+              except urllib.error.HTTPError as e:
+                  return None, e.code
+
+          # Verificar si Dependabot está habilitado (intentando acceder a alertas)
+          page = 1
+          all_alerts = []
+          dependabot_enabled = True
+
+          while True:
+              alerts, status = gh_api(
+                  f"/repos/{REPO}/dependabot/alerts?state=open&per_page=100&page={page}",
+                  TOKEN
+              )
+              if status == 403:
+                  dependabot_enabled = False
+                  break
+              if status == 404:
+                  dependabot_enabled = False
+                  break
+              if not alerts:
+                  break
+              all_alerts.extend(alerts)
+              if len(alerts) < 100:
+                  break
+              page += 1
+
+          # Contar por severidad
+          counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "unknown": 0}
+          packages_affected = []
+
+          for alert in all_alerts:
+              sev = alert.get("security_vulnerability", {}).get("severity", "unknown").lower()
+              counts[sev] = counts.get(sev, 0) + 1
+              pkg = alert.get("dependency", {}).get("package", {}).get("name", "unknown")
+              ecosystem = alert.get("dependency", {}).get("package", {}).get("ecosystem", "")
+              cve = alert.get("security_advisory", {}).get("cve_id", "N/A")
+              packages_affected.append({
+                  "severity": sev,
+                  "package": pkg,
+                  "ecosystem": ecosystem,
+                  "cve": cve,
+                  "number": alert.get("number", "?")
+              })
+
+          total = sum(counts.values())
+
+          # Generar reporte Markdown
+          report_lines = [
+              "## 📦 Dependabot Security Status",
+              "",
+              f"**Repositorio**: `{REPO}`",
+              f"**Estado de Dependabot**: {'✅ Habilitado' if dependabot_enabled else '❌ Deshabilitado o sin permisos'}",
+              "",
+              "### 📊 Resumen de Alertas Abiertas",
+              "",
+              "| 🔴 Críticas | 🟠 Altas | 🟡 Medias | 🔵 Bajas | ⚪ Desconocidas | Total |",
+              "|:-----------:|:--------:|:---------:|:--------:|:---------------:|:-----:|",
+              f"| **{counts['critical']}** | **{counts['high']}** | {counts['medium']} | {counts['low']} | {counts['unknown']} | {total} |",
+              ""
+          ]
+
+          if not dependabot_enabled:
+              report_lines += [
+                  "### ❌ Dependabot no está habilitado",
+                  "",
+                  "Para habilitarlo, sigue el tutorial: [Activación de Dependabot](https://github.com/amazing-protection/security-platform/blob/main/docs/tutorials/06-dependabot-activation.md)",
+                  ""
+              ]
+          elif packages_affected:
+              # Ordenar por severidad
+              sev_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unknown": 0}
+              packages_affected.sort(key=lambda x: sev_order.get(x["severity"], 0), reverse=True)
+
+              report_lines += [
+                  "### 🚨 Dependencias Vulnerables",
+                  "",
+                  "| # | Severidad | Paquete | Ecosistema | CVE | Alerta |",
+                  "|---|-----------|---------|------------|-----|--------|"
+              ]
+              for i, pkg in enumerate(packages_affected[:30], 1):
+                  emoji = SEVERITY_EMOJI.get(pkg["severity"], "⚪")
+                  alert_url = f"https://github.com/{REPO}/security/dependabot/{pkg['number']}"
+                  report_lines.append(
+                      f"| {i} | {emoji} {pkg['severity'].upper()} | `{pkg['package']}` | {pkg['ecosystem']} | {pkg['cve']} | [#{pkg['number']}]({alert_url}) |"
+                  )
+              if len(packages_affected) > 30:
+                  report_lines.append(f"| … | | | | | *+{len(packages_affected)-30} más* |")
+          else:
+              report_lines += [
+                  "### ✅ Sin alertas abiertas",
+                  "",
+                  "> No hay dependencias vulnerables conocidas. ¡Excelente! 🎉",
+                  ""
+              ]
+
+          # Añadir config file check
+          config_exists = os.path.exists(".github/dependabot.yml")
+          report_lines += [
+              "",
+              "### ⚙️ Configuración",
+              "",
+              f"- `.github/dependabot.yml`: {'✅ Presente' if config_exists else '❌ No encontrado'}",
+              ""
+          ]
+
+          report = "\n".join(report_lines)
+          print(report)
+
+          # Guardar reporte
+          os.makedirs(".security", exist_ok=True)
+          with open(".security/dependabot-report.md", "w") as f:
+              f.write(report)
+
+          # GitHub Step Summary
+          with open(os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null"), "w") as f:
+              f.write(report)
+
+          # Outputs
+          github_output = os.environ.get("GITHUB_OUTPUT", "/dev/null")
+          with open(github_output, "a") as f:
+              f.write(f"dependabot-enabled={'true' if dependabot_enabled else 'false'}\n")
+              f.write(f"critical-alerts={counts['critical']}\n")
+              f.write(f"high-alerts={counts['high']}\n")
+              f.write(f"total-alerts={total}\n")
+
+          # Security gate
+          if REPORT_ONLY:
+              print("\nℹ️  Modo report-only: no se bloquea el pipeline")
+              sys.exit(0)
+
+          if not dependabot_enabled:
+              print("\n❌ Dependabot no está habilitado. Actívalo para continuar.")
+              sys.exit(1)
+
+          should_fail = False
+          if FAIL_ON_CRITICAL and counts["critical"] > MAX_CRITICAL:
+              print(f"❌ Security gate: {counts['critical']} alertas críticas (máximo permitido: {MAX_CRITICAL})")
+              should_fail = True
+          if FAIL_ON_HIGH and counts["high"] > MAX_HIGH:
+              print(f"❌ Security gate: {counts['high']} alertas altas (máximo permitido: {MAX_HIGH})")
+              should_fail = True
+
+          if should_fail:
+              sys.exit(1)
+          else:
+              print("✅ Dependabot security gate aprobado")
+          PYTHON
+
+      # ─────────────────────────────────────────────
+      # 3. Comentar en Pull Request
+      # ─────────────────────────────────────────────
+      - name: Post PR comment
+        if: github.event_name == 'pull_request' && always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: dependabot-results
+          path: .security/dependabot-report.md
+        continue-on-error: true

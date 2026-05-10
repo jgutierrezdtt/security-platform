@@ -1,0 +1,76 @@
+# .semgrepignore
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE: Copia este archivo a .semgrepignore en la raíz de tu repo.
+# Lista de patrones de archivos que Semgrep debe ignorar.
+# ─────────────────────────────────────────────────────────────────
+
+# ─── Dependencias y packages (no analizamos código de terceros) ───
+node_modules/
+vendor/
+.venv/
+venv/
+env/
+.env/
+__pycache__/
+.eggs/
+*.egg-info/
+
+# ─── Artefactos de build ──────────────────────────────────────────
+dist/
+build/
+out/
+target/
+bin/
+coverage/
+.next/
+.nuxt/
+.output/
+
+# ─── Código generado automáticamente ─────────────────────────────
+# (No tiene sentido analizar código que no escribimos)
+*_generated.go
+*_gen.go
+*.pb.go
+*_pb2.py
+*_pb2_grpc.py
+*_pb.js
+*.pb.ts
+*.min.js
+*.min.css
+*.bundle.js
+
+# ─── Tests y fixtures ─────────────────────────────────────────────
+# Los archivos de test con datos de prueba pueden tener falsos positivos
+tests/fixtures/
+test/fixtures/
+testdata/
+**/__fixtures__/
+**/__mocks__/
+
+# ─── Archivos de configuración de ejemplo ─────────────────────────
+*.example
+*.sample
+*.template
+**/*.example.*
+**/*.sample.*
+
+# ─── Documentación ────────────────────────────────────────────────
+docs/
+*.md
+*.rst
+*.txt
+
+# ─── IDEs y editores ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── Archivos de lock (solo dependencias, no código) ──────────────
+package-lock.json
+yarn.lock
+Pipfile.lock
+poetry.lock
+go.sum
+composer.lock
+Gemfile.lock

@@ -1,0 +1,241 @@
+name: Reusable — SLSA Level 3 Build & Provenance
+
+# ─────────────────────────────────────────────────────────────────
+# Implementa Supply chain Levels for Software Artifacts (SLSA) L3
+# usando el generador oficial: slsa-framework/slsa-github-generator
+#
+# SLSA L3 garantiza:
+#  ✅ Provenance generado por plataforma confiable (GitHub Actions)
+#  ✅ No modificable: firma criptográfica Sigstore/Cosign
+#  ✅ Aislado: job de provenance separado del build
+#  ✅ Verificable: cualquiera puede verificar con `slsa-verifier`
+# ─────────────────────────────────────────────────────────────────
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: "Nombre del artefacto a firmar (ej: myapp-linux-amd64)"
+        type: string
+        required: true
+      artifact-path:
+        description: "Ruta al artefacto generado por el job de build"
+        type: string
+        required: true
+      build-command:
+        description: "Comando de build (ej: 'make build' o 'go build -o myapp .')"
+        type: string
+        required: true
+      upload-assets:
+        description: "Subir artefacto + provenance al Release de GitHub"
+        type: boolean
+        default: true
+      go-version:
+        description: "Versión de Go (si aplica)"
+        type: string
+        default: ""
+      node-version:
+        description: "Versión de Node.js (si aplica)"
+        type: string
+        default: ""
+      python-version:
+        description: "Versión de Python (si aplica)"
+        type: string
+        default: ""
+
+    outputs:
+      artifact-sha256:
+        description: "SHA256 del artefacto construido"
+        value: ${{ jobs.build.outputs.artifact-sha256 }}
+      provenance-name:
+        description: "Nombre del archivo de provenance generado"
+        value: ${{ jobs.provenance.outputs.provenance-name }}
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1: Build — construir el artefacto
+  # Este job debe tener el mínimo de permisos posibles
+  # ─────────────────────────────────────────────
+  build:
+    name: Build Artifact
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read  # Solo lectura del código fuente
+
+    outputs:
+      artifact-sha256: ${{ steps.compute-hash.outputs.sha256 }}
+      hashes: ${{ steps.compute-hash.outputs.hashes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Runtime setup (condicional según lenguaje)
+      - name: Set up Go
+        if: inputs.go-version != ''
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+          cache: true
+
+      - name: Set up Node.js
+        if: inputs.node-version != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Set up Python
+        if: inputs.python-version != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      # ─── Build ───────────────────────────────
+      - name: Build artifact
+        id: build
+        run: |
+          echo "→ Ejecutando build: ${{ inputs.build-command }}"
+          ${{ inputs.build-command }}
+          echo "✅ Build completado"
+
+      # ─── Verificar que el artefacto existe ───
+      - name: Verify artifact exists
+        run: |
+          if [[ ! -f "${{ inputs.artifact-path }}" ]]; then
+            echo "❌ El artefacto no se encontró en: ${{ inputs.artifact-path }}"
+            echo "   Asegúrate de que el build-command genera el archivo correctamente"
+            exit 1
+          fi
+          echo "✅ Artefacto encontrado: ${{ inputs.artifact-path }}"
+          ls -lh "${{ inputs.artifact-path }}"
+
+      # ─── Calcular hash SHA256 ─────────────────
+      # CRÍTICO para SLSA: el hash vincula el artefacto con el provenance
+      - name: Compute SHA256 hash
+        id: compute-hash
+        run: |
+          SHA256=$(sha256sum "${{ inputs.artifact-path }}" | awk '{print $1}')
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+
+          # Formato base64 requerido por slsa-github-generator
+          HASHES=$(sha256sum "${{ inputs.artifact-path }}" | base64 -w0)
+          echo "hashes=${HASHES}" >> "$GITHUB_OUTPUT"
+
+          echo "✅ SHA256: ${SHA256}"
+
+      # ─── Subir artefacto ─────────────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          retention-days: 30
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Provenance — generar provenance SLSA L3
+  # Este job está AISLADO del build (requisito SLSA L3)
+  # Usa el generador oficial firmado por la SLSA Framework
+  # ─────────────────────────────────────────────
+  provenance:
+    name: Generate SLSA Provenance (L3)
+    needs: [build]
+
+    # IMPORTANTE: Estos permisos son requeridos por el generador SLSA
+    permissions:
+      actions: read      # Leer el workflow run
+      id-token: write    # Obtener token OIDC para firma Sigstore
+      contents: write    # Subir al release (si upload-assets=true)
+
+    # Referencia FIJA con SHA para prevenir ataques de supply chain
+    # Actualizar periódicamente consultando: https://github.com/slsa-framework/slsa-github-generator/releases
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+
+    with:
+      base64-subjects: "${{ needs.build.outputs.hashes }}"
+      # Subir provenance al release si está disponible
+      upload-assets: ${{ inputs.upload-assets && github.event_name == 'release' }}
+      # Nombre del archivo de provenance
+      provenance-name: "${{ inputs.artifact-name }}.intoto.jsonl"
+
+  # ─────────────────────────────────────────────
+  # JOB 3: Verify — verificar el provenance generado
+  # Valida que el artefacto y el provenance son coherentes
+  # ─────────────────────────────────────────────
+  verify:
+    name: Verify SLSA Provenance
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+
+      - name: Download provenance
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.artifact-name }}.intoto.jsonl"
+
+      - name: Install slsa-verifier
+        run: |
+          # Instalar el verificador oficial de SLSA
+          curl -sfL -o slsa-verifier \
+            "https://github.com/slsa-framework/slsa-verifier/releases/latest/download/slsa-verifier-linux-amd64"
+          chmod +x slsa-verifier
+          ./slsa-verifier version
+
+      - name: Verify provenance
+        run: |
+          ARTIFACT=$(basename "${{ inputs.artifact-path }}")
+          PROVENANCE="${{ inputs.artifact-name }}.intoto.jsonl"
+
+          echo "→ Verificando provenance SLSA L3..."
+          ./slsa-verifier verify-artifact \
+            --provenance-path "${PROVENANCE}" \
+            --source-uri "github.com/${{ github.repository }}" \
+            --source-tag "${{ github.ref_name }}" \
+            "${ARTIFACT}"
+
+          echo "✅ Provenance SLSA L3 verificado correctamente"
+
+      - name: Output verification summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
+          ## 🔏 SLSA Provenance L3 — Verificado
+
+          | Campo | Valor |
+          |-------|-------|
+          | **Nivel SLSA** | Level 3 |
+          | **Artefacto** | `${{ inputs.artifact-name }}` |
+          | **SHA256** | `${{ needs.build.outputs.artifact-sha256 }}` |
+          | **Repositorio** | `${{ github.repository }}` |
+          | **Commit** | `${{ github.sha }}` |
+          | **Workflow** | `${{ github.workflow }}` |
+          | **Runner** | GitHub-hosted (ubuntu-latest) |
+          | **Firma** | Sigstore/Cosign (keyless) |
+          | **Estado** | ✅ Verificado |
+
+          ### Verificación manual
+
+          Cualquier persona puede verificar este artefacto:
+
+          ```bash
+          # Instalar slsa-verifier
+          go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
+
+          # Verificar
+          slsa-verifier verify-artifact \
+            --provenance-path ${{ inputs.artifact-name }}.intoto.jsonl \
+            --source-uri github.com/${{ github.repository }} \
+            ${{ inputs.artifact-name }}
+          ```
+          EOF

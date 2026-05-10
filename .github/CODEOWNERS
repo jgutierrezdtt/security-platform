@@ -1,0 +1,27 @@
+# .github/CODEOWNERS — security-platform
+# Solo el security-team puede aprobar cambios aquí.
+# Todo cambio a workflows reutilizables requiere doble aprobación.
+
+# Por defecto: security-team
+*                                           @amazing-protection/security-team
+
+# Workflows reutilizables — doble control (2 personas del security-team)
+.github/workflows/reusable/                 @amazing-protection/security-team
+
+# Platform CI — security-team + platform-team
+.github/workflows/ci.yml                    @amazing-protection/security-team @amazing-protection/platform-team
+
+# Configuración de Semgrep — solo security-team
+config/semgrep/                             @amazing-protection/security-team
+
+# Templates para consumidores — platform-team con revisión de security
+templates/                                  @amazing-protection/platform-team @amazing-protection/security-team
+
+# Documentación — platform-team puede aprobar
+docs/                                       @amazing-protection/platform-team @amazing-protection/security-team
+
+# Scripts — platform-team
+scripts/                                    @amazing-protection/platform-team @amazing-protection/security-team
+
+# Config de monitored repos
+config/monitored-repos.txt                  @amazing-protection/security-team

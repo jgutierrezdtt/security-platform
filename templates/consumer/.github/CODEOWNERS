@@ -1,0 +1,41 @@
+# CODEOWNERS
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE: Copia este archivo a .github/CODEOWNERS en tu repo
+# y ajusta los teams/usuarios según tu equipo.
+#
+# Documentación: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ─────────────────────────────────────────────────────────────────
+# Sintaxis: <patrón_glob>    <propietario1> [propietario2 ...]
+# La ÚLTIMA regla que coincide gana.
+# ─────────────────────────────────────────────────────────────────
+
+# ─── Propietario por defecto (toda la base de código) ─────────────
+# Ajusta al team responsable del repositorio
+*                                  @amazing-protection/developers
+
+# ─── Infraestructura de seguridad (require security-team review) ──
+# CRÍTICO: cualquier cambio aquí requiere aprobación del security-team
+.github/workflows/                 @amazing-protection/security-team
+.github/dependabot.yml             @amazing-protection/security-team
+.semgrepignore                     @amazing-protection/security-team
+config/semgrep/                    @amazing-protection/security-team
+SECURITY.md                        @amazing-protection/security-team
+
+# ─── Infraestructura y deployment ─────────────────────────────────
+# Ajusta al team de infraestructura
+Dockerfile                         @amazing-protection/platform-team
+docker-compose*.yml                @amazing-protection/platform-team
+terraform/                         @amazing-protection/platform-team
+kubernetes/                        @amazing-protection/platform-team
+helm/                              @amazing-protection/platform-team
+.github/workflows/release.yml      @amazing-protection/platform-team @amazing-protection/security-team
+
+# ─── Documentación ────────────────────────────────────────────────
+docs/                              @amazing-protection/developers
+*.md                               @amazing-protection/developers
+
+# ─── Tests ────────────────────────────────────────────────────────
+tests/                             @amazing-protection/developers
+test/                              @amazing-protection/developers
+**/*.test.*                        @amazing-protection/developers
+**/*.spec.*                        @amazing-protection/developers

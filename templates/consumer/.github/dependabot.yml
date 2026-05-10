@@ -1,0 +1,115 @@
+# .github/dependabot.yml
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE: Copia este archivo a .github/dependabot.yml
+# en tu repositorio y ajusta los ecosistemas según tu stack.
+# ─────────────────────────────────────────────────────────────────
+
+version: 2
+
+updates:
+  # ─── GitHub Actions (siempre incluir) ─────────────────────────
+  # Mantiene las acciones pinned por hash actualizadas de forma segura
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Madrid"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 10
+
+  # ─── npm / Node.js ─────────────────────────────────────────────
+  # Descomenta si usas Node.js
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "tuesday"
+  #     time: "09:00"
+  #     timezone: "Europe/Madrid"
+  #   labels:
+  #     - "dependencies"
+  #     - "javascript"
+  #   commit-message:
+  #     prefix: "chore"
+  #     include: "scope"
+  #   groups:
+  #     production-patch:
+  #       dependency-type: "production"
+  #       update-types: ["patch"]
+  #     dev-minor-patch:
+  #       dependency-type: "development"
+  #       update-types: ["minor", "patch"]
+  #   ignore:
+  #     - dependency-name: "*"
+  #       update-types: ["version-update:semver-major"]
+  #   open-pull-requests-limit: 10
+
+  # ─── Python / pip ──────────────────────────────────────────────
+  # Descomenta si usas Python
+  # - package-ecosystem: "pip"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "tuesday"
+  #   labels:
+  #     - "dependencies"
+  #     - "python"
+  #   commit-message:
+  #     prefix: "chore"
+  #   groups:
+  #     python-minor-patch:
+  #       patterns: ["*"]
+  #       update-types: ["minor", "patch"]
+  #   open-pull-requests-limit: 10
+
+  # ─── Go modules ────────────────────────────────────────────────
+  # Descomenta si usas Go
+  # - package-ecosystem: "gomod"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "go"
+  #   commit-message:
+  #     prefix: "chore"
+  #   groups:
+  #     go-minor-patch:
+  #       patterns: ["*"]
+  #       update-types: ["minor", "patch"]
+
+  # ─── Docker ────────────────────────────────────────────────────
+  # Descomenta si tienes Dockerfiles
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "wednesday"
+  #   labels:
+  #     - "dependencies"
+  #     - "docker"
+  #   commit-message:
+  #     prefix: "chore"
+
+  # ─── Maven (Java) ──────────────────────────────────────────────
+  # - package-ecosystem: "maven"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+
+  # ─── Gradle ─────────────────────────────────────────────────────
+  # - package-ecosystem: "gradle"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"

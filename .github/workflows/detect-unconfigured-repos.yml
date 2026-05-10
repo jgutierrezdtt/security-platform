@@ -1,0 +1,208 @@
+name: Detect Unconfigured Repos
+
+on:
+  schedule:
+    # Cada lunes a las 08:00 UTC — detecta repos nuevos sin onboarding
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+    inputs:
+      create-issues:
+        description: "Crear issues en repos no configurados"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  detect:
+    name: Detect Repos Without Security Workflow
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Detect unconfigured repos
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.ORG_SECURITY_REPORT_TOKEN }}
+          ORG: "amazing-protection"
+          CREATE_ISSUES: ${{ inputs.create-issues || 'false' }}
+        run: |
+          python3 << 'PYTHON'
+          import os, sys, json, time
+          import requests
+
+          TOKEN = os.environ["GH_TOKEN"]
+          ORG   = os.environ["ORG"]
+          CREATE_ISSUES = os.environ.get("CREATE_ISSUES", "false").lower() == "true"
+
+          EXCLUDE_REPOS = {"security-platform", "security-exceptions"}
+          SECURITY_WORKFLOW_PATH = ".github/workflows/security.yml"
+
+          session = requests.Session()
+          session.headers.update({
+              "Authorization": f"Bearer {TOKEN}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+          })
+
+          def gh_get(path, **kwargs):
+              resp = session.get(f"https://api.github.com{path}", timeout=30, **kwargs)
+              if resp.status_code in (403, 404):
+                  return None
+              resp.raise_for_status()
+              return resp.json()
+
+          def gh_get_all(path, **kwargs):
+              results, url = [], f"https://api.github.com{path}"
+              params = {**kwargs.pop("params", {}), "per_page": 100}
+              while url:
+                  resp = session.get(url, params=params, timeout=30)
+                  resp.raise_for_status()
+                  results.extend(resp.json())
+                  url = resp.links.get("next", {}).get("url")
+                  params = {}
+              return results
+
+          # Listar repos activos (no archivados, no forks)
+          print(f"🔍 Listando repos de {ORG}...")
+          all_repos = gh_get_all(f"/orgs/{ORG}/repos", params={"type": "all"})
+          active_repos = [
+              r for r in all_repos
+              if not r["archived"] and not r["fork"] and r["name"] not in EXCLUDE_REPOS
+          ]
+          print(f"   → {len(active_repos)} repos activos\n")
+
+          not_configured = []
+          has_open_pr    = []
+          configured     = []
+
+          for i, repo in enumerate(active_repos, 1):
+              full_name = repo["full_name"]
+              sys.stdout.write(f"\r   Revisando [{i}/{len(active_repos)}] {full_name:<60}")
+              sys.stdout.flush()
+
+              # ¿Tiene el workflow?
+              data = gh_get(f"/repos/{full_name}/contents/{SECURITY_WORKFLOW_PATH}")
+              if data:
+                  configured.append(full_name)
+                  continue
+
+              # ¿Tiene un PR de onboarding abierto?
+              prs = gh_get(f"/repos/{full_name}/pulls", params={
+                  "head": f"{ORG}:security/onboarding-platform",
+                  "state": "open",
+              })
+              if prs:
+                  has_open_pr.append(full_name)
+              else:
+                  not_configured.append(full_name)
+
+              time.sleep(0.1)  # suave throttle
+
+          print(f"\n\n{'='*60}")
+          print(f"✅ Configurados:         {len(configured)}")
+          print(f"⏳ PR onboarding abierto: {len(has_open_pr)}")
+          print(f"❌ Sin configurar:        {len(not_configured)}")
+
+          # Escribir step summary
+          summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
+          with open(summary, "w") as f:
+              f.write("## 🔍 Repos sin Security Workflow\n\n")
+              f.write(f"| Estado | Repos |\n|--------|-------|\n")
+              f.write(f"| ✅ Configurados | {len(configured)} |\n")
+              f.write(f"| ⏳ PR de onboarding abierto | {len(has_open_pr)} |\n")
+              f.write(f"| ❌ Sin configurar | {len(not_configured)} |\n\n")
+
+              if not_configured:
+                  f.write("### ❌ Repos que necesitan onboarding\n\n")
+                  f.write("Ejecuta el script de onboarding masivo:\n")
+                  f.write("```bash\n")
+                  f.write(f"export GH_TOKEN=<tu-token>\n")
+                  f.write("python3 scripts/bulk-onboard.py \\\n")
+                  f.write(f"  --org {ORG} \\\n")
+                  f.write("  --repos-file repos-to-onboard.txt\n")
+                  f.write("```\n\n")
+                  f.write("**Lista de repos:**\n\n")
+                  for r in not_configured:
+                      f.write(f"- [`{r}`](https://github.com/{r})\n")
+
+              if has_open_pr:
+                  f.write("\n### ⏳ PR de onboarding pendiente de merge\n\n")
+                  for r in has_open_pr:
+                      f.write(f"- [`{r}`](https://github.com/{r}/pulls)\n")
+
+          # Guardar outputs para el siguiente step
+          github_output = os.environ.get("GITHUB_OUTPUT", "/dev/null")
+          with open(github_output, "a") as f:
+              f.write(f"not-configured-count={len(not_configured)}\n")
+              f.write(f"not-configured-list={json.dumps(not_configured)}\n")
+
+          PYTHON
+
+      - name: Create tracking issue if repos are unconfigured
+        if: steps.detect.outputs.not-configured-count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOT_CONFIGURED: ${{ steps.detect.outputs.not-configured-list }}
+        run: |
+          COUNT=$(echo '${{ steps.detect.outputs.not-configured-count }}')
+          TITLE="🔐 ${COUNT} repos sin security workflow — $(date +%Y-%m-%d)"
+
+          # No crear duplicados
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" \
+            --state open \
+            --label "onboarding-pending" \
+            --json number --jq 'length')
+
+          if [[ "$EXISTING" -gt 0 ]]; then
+            echo "ℹ️  Ya existe un issue de onboarding abierto — actualizando"
+            exit 0
+          fi
+
+          # Generar lista de repos en Markdown
+          REPO_LIST=$(python3 -c "
+          import json, os
+          repos = json.loads(os.environ['NOT_CONFIGURED'])
+          lines = [f'- [ ] [{r}](https://github.com/{r})' for r in repos]
+          print('\n'.join(lines))
+          ")
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "${TITLE}" \
+            --label "onboarding-pending,security" \
+            --assignee "@amazing-protection/security-team" \
+            --body "## Repos sin security workflow
+
+          Los siguientes repos aún no tienen el workflow de seguridad configurado.
+
+          ### Acción requerida
+
+          Ejecutar el onboarding masivo:
+          \`\`\`bash
+          export GH_TOKEN=<ORG_SECURITY_REPORT_TOKEN>
+          python3 scripts/bulk-onboard.py --org amazing-protection
+          \`\`\`
+
+          O aplicar repo por repo con:
+          \`\`\`bash
+          python3 scripts/bulk-onboard.py --org amazing-protection --repos-file repos.txt
+          \`\`\`
+
+          ### Repos pendientes
+
+          ${REPO_LIST}
+
+          ---
+          *Generado automáticamente por [detect-unconfigured-repos workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*"

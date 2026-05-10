@@ -1,0 +1,148 @@
+name: Security Gate
+
+# ─────────────────────────────────────────────────────────────────
+# TEMPLATE: Copia este archivo a .github/workflows/security.yml
+# en tu repositorio y ajusta los parámetros según tu proyecto.
+#
+# Requiere los siguientes secrets en el repositorio:
+#   - SEMGREP_APP_TOKEN       (opcional, para Semgrep Cloud Platform)
+#   - EXCEPTIONS_READER_TOKEN (requerido, Fine-grained PAT read-only)
+#   - DEPENDABOT_CHECK_TOKEN  (requerido, Fine-grained PAT con Dependabot read)
+#
+# Documentación completa:
+# https://github.com/amazing-protection/security-platform
+# ─────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches:
+      - main
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+      - "release/**"
+  schedule:
+    # Escaneo completo semanal (lunes 02:00 UTC)
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      scan-scope:
+        description: "Alcance del escaneo Semgrep"
+        type: choice
+        options: [diff, full]
+        default: diff
+
+# Permisos mínimos en el nivel del workflow (los reusable añaden los suyos)
+permissions:
+  contents: read
+
+jobs:
+  # ───────────────────────────────────────────────────────────────
+  # Gate 1: SAST con Semgrep
+  # Detecta vulnerabilidades en el código fuente (OWASP Top 10, etc.)
+  # ───────────────────────────────────────────────────────────────
+  semgrep:
+    name: Semgrep SAST
+    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    with:
+      # "diff" analiza solo los cambios del PR (más rápido)
+      # "full" analiza todo el repositorio (recomendado en schedule)
+      scan-scope: ${{ github.event_name == 'schedule' && 'full' || inputs.scan-scope || 'diff' }}
+
+      # Severidad mínima para fallar el pipeline
+      # Valores: critical | high | medium | low
+      fail-on-severity: high
+
+      # Subir resultados al Security tab de GitHub (requiere GHAS habilitado)
+      upload-sarif: true
+
+      # Crear GitHub Issues para cada hallazgo nuevo (deshabilitado por defecto)
+      # Habilitar solo en escáneres programados, no en cada PR
+      create-issues: ${{ github.event_name == 'schedule' }}
+
+      # En Draft PRs solo reportar, no bloquear (para feedback temprano)
+      report-only: ${{ github.event.pull_request.draft == true }}
+
+      # Repositorio de excepciones aprobadas (no cambiar)
+      exceptions-repo: amazing-protection/security-exceptions
+
+      # Conjuntos de reglas Semgrep
+      # Personaliza según tu stack: p/nodejs, p/python, p/java, p/go, p/ruby, etc.
+      # Lista completa: https://semgrep.dev/r
+      semgrep-rules: >-
+        p/default
+        p/owasp-top-ten
+        p/security-audit
+
+    secrets:
+      # Token de Semgrep Cloud Platform (opcional)
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      # Fine-grained PAT con Contents:Read en security-exceptions (requerido)
+      EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+
+  # ───────────────────────────────────────────────────────────────
+  # Gate 2: Dependabot — dependencias vulnerables
+  # Verifica que no haya alertas críticas/altas sin resolver
+  # ───────────────────────────────────────────────────────────────
+  dependabot:
+    name: Dependabot Status
+    uses: amazing-protection/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    with:
+      # Bloquear si hay alertas críticas sin resolver (0 tolerancia)
+      fail-on-critical: true
+      max-critical: 0
+
+      # Bloquear si hay alertas altas sin resolver
+      fail-on-high: true
+      max-high: 0
+
+      # Verificar que Dependabot esté habilitado en el repo
+      check-dependabot-enabled: true
+
+    secrets:
+      # Fine-grained PAT con Dependabot alerts:Read (requerido)
+      DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}
+
+  # ───────────────────────────────────────────────────────────────
+  # Resumen final: agrega los resultados de todos los gates
+  # ───────────────────────────────────────────────────────────────
+  security-summary:
+    name: Security Gate Summary
+    needs: [semgrep, dependabot]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Evaluate overall security gate
+        env:
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          DEPENDABOT_RESULT: ${{ needs.dependabot.result }}
+          SEMGREP_CRITICAL: ${{ needs.semgrep.outputs.critical-count }}
+          SEMGREP_HIGH: ${{ needs.semgrep.outputs.high-count }}
+          DEPENDABOT_CRITICAL: ${{ needs.dependabot.outputs.critical-alerts }}
+          DEPENDABOT_HIGH: ${{ needs.dependabot.outputs.high-alerts }}
+        run: |
+          # Escribir resumen en el Job Summary de GitHub Actions
+          {
+            echo "## 🚦 Security Gate — Resumen Final"
+            echo ""
+            echo "| Check | Estado | Críticas | Altas |"
+            echo "|-------|--------|----------|-------|"
+            echo "| Semgrep SAST | $([ "${SEMGREP_RESULT}" = "success" ] && echo "✅ Aprobado" || echo "❌ Fallido") | ${SEMGREP_CRITICAL:-?} | ${SEMGREP_HIGH:-?} |"
+            echo "| Dependabot | $([ "${DEPENDABOT_RESULT}" = "success" ] && echo "✅ Aprobado" || echo "❌ Fallido") | ${DEPENDABOT_CRITICAL:-?} | ${DEPENDABOT_HIGH:-?} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Fallar si cualquier gate falló
+          if [[ "${SEMGREP_RESULT}" != "success" || "${DEPENDABOT_RESULT}" != "success" ]]; then
+            echo ""
+            echo "❌ Security Gate fallido"
+            echo ""
+            echo "Para resolver:"
+            echo "• Corrige las vulnerabilidades reportadas en los comentarios del PR"
+            echo "• Para falsos positivos: abre un issue en amazing-protection/security-exceptions"
+            echo "• Documentación: https://github.com/amazing-protection/security-platform"
+            exit 1
+          fi
+
+          echo "✅ Todos los security gates han pasado"

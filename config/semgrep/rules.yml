@@ -1,0 +1,45 @@
+rules:
+  # ─── Credenciales hardcodeadas ────────────────────────────────
+  - id: no-hardcoded-api-keys
+    patterns:
+      - pattern: |
+          $KEY = "..."
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: '(?i)(api[_-]?key|apikey|secret[_-]?key|access[_-]?token|auth[_-]?token|password|passwd|private[_-]?key)'
+      - metavariable-regex:
+          metavariable: "\"...\""
+          regex: '.{12,}'
+    message: |
+      Posible credencial hardcodeada en `$KEY`.
+      Usa variables de entorno o un gestor de secretos.
+    languages: [python, javascript, typescript, java, go, ruby]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021"
+
+  # ─── SQL Injection ────────────────────────────────────────────
+  - id: sql-injection-string-concat
+    patterns:
+      - pattern: |
+          $DB.query("..." + $INPUT)
+    message: SQL injection potencial por concatenación directa de input.
+    languages: [javascript, typescript, python]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+
+  # ─── nosemgrep sin justificación ─────────────────────────────
+  - id: no-bare-nosemgrep
+    pattern: |
+      $X # nosemgrep
+    message: |
+      `nosemgrep` sin especificar la regla suprimida ni justificación.
+      Usa el formato: `# nosemgrep: rule-id — razón por la que es un falso positivo`
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security-process

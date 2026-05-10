@@ -1,0 +1,497 @@
+name: Reusable — Semgrep Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-scope:
+        description: |
+          Alcance del escaneo:
+          - "diff": Solo archivos modificados en el PR (recomendado para velocidad)
+          - "full": Repositorio completo (recomendado para rama principal)
+        type: string
+        default: "diff"
+      fail-on-severity:
+        description: "Severidad mínima para fallar el pipeline: critical | high | medium | low"
+        type: string
+        default: "high"
+      upload-sarif:
+        description: "Subir resultados SARIF al Security tab de GitHub (requiere GHAS)"
+        type: boolean
+        default: true
+      create-issues:
+        description: "Crear GitHub Issues automáticamente para cada hallazgo nuevo"
+        type: boolean
+        default: false
+      exceptions-repo:
+        description: "Repositorio de excepciones aprobadas (org/repo)"
+        type: string
+        default: "amazing-protection/security-exceptions"
+      semgrep-rules:
+        description: "Reglas Semgrep adicionales (p/ej: p/owasp-top-ten p/ci)"
+        type: string
+        default: "p/default p/security-audit p/owasp-top-ten"
+      report-only:
+        description: "Solo reportar, nunca fallar el pipeline (útil en branches de feature)"
+        type: boolean
+        default: false
+
+    secrets:
+      SEMGREP_APP_TOKEN:
+        description: "Token de Semgrep Cloud Platform (opcional pero recomendado para reglas Pro)"
+        required: false
+      EXCEPTIONS_READER_TOKEN:
+        description: "Fine-grained PAT con permiso 'Contents: Read' al repo de excepciones"
+        required: true
+
+    outputs:
+      findings-count:
+        description: "Número total de hallazgos después de filtrar excepciones"
+        value: ${{ jobs.semgrep.outputs.findings-count }}
+      critical-count:
+        description: "Número de hallazgos críticos"
+        value: ${{ jobs.semgrep.outputs.critical-count }}
+      high-count:
+        description: "Número de hallazgos altos"
+        value: ${{ jobs.semgrep.outputs.high-count }}
+
+jobs:
+  semgrep:
+    name: Semgrep SAST Scan
+    runs-on: ubuntu-latest
+
+    # Permisos mínimos necesarios (principio de menor privilegio)
+    permissions:
+      contents: read           # Checkout del código
+      security-events: write   # Subir SARIF al Security tab
+      pull-requests: write     # Comentar en Pull Requests
+      issues: write            # Crear Issues (solo si create-issues=true)
+
+    outputs:
+      findings-count: ${{ steps.process-results.outputs.findings-count }}
+      critical-count: ${{ steps.process-results.outputs.critical-count }}
+      high-count: ${{ steps.process-results.outputs.high-count }}
+
+    steps:
+      # ─────────────────────────────────────────────
+      # 1. Checkout
+      # ─────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necesario para comparación diff
+
+      # ─────────────────────────────────────────────
+      # 2. Setup Python para el procesador de resultados
+      # ─────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install semgrep==1.70.0 pyyaml jsonschema
+
+      # ─────────────────────────────────────────────
+      # 3. Obtener excepciones aprobadas del repo central
+      # ─────────────────────────────────────────────
+      - name: Fetch global exceptions
+        id: fetch-global-exceptions
+        env:
+          EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+          EXCEPTIONS_REPO: ${{ inputs.exceptions-repo }}
+        run: |
+          mkdir -p .security/exceptions
+
+          echo "→ Obteniendo excepciones globales de ${EXCEPTIONS_REPO}..."
+          HTTP_CODE=$(curl -sfL \
+            -H "Authorization: Bearer ${EXCEPTIONS_READER_TOKEN}" \
+            -H "Accept: application/vnd.github.raw+json" \
+            -w "%{http_code}" \
+            -o .security/exceptions/global.yml \
+            "https://api.github.com/repos/${EXCEPTIONS_REPO}/contents/exceptions/global/false-positives.yml")
+
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            echo "✅ Excepciones globales obtenidas"
+            echo "global-exceptions-loaded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️  No se encontraron excepciones globales (HTTP ${HTTP_CODE})"
+            echo "global-exceptions-loaded=false" >> "$GITHUB_OUTPUT"
+            echo "exceptions: []" > .security/exceptions/global.yml
+          fi
+
+      - name: Fetch repo-specific exceptions
+        env:
+          EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
+          EXCEPTIONS_REPO: ${{ inputs.exceptions-repo }}
+        run: |
+          # Normalizar nombre del repo para usarlo como clave
+          REPO_SLUG="${{ github.repository }}"
+          REPO_SLUG="${REPO_SLUG//\//__}"
+
+          echo "→ Obteniendo excepciones específicas de ${REPO_SLUG}..."
+          HTTP_CODE=$(curl -sfL \
+            -H "Authorization: Bearer ${EXCEPTIONS_READER_TOKEN}" \
+            -H "Accept: application/vnd.github.raw+json" \
+            -w "%{http_code}" \
+            -o .security/exceptions/repo.yml \
+            "https://api.github.com/repos/${EXCEPTIONS_REPO}/contents/exceptions/by-repo/${REPO_SLUG}/exceptions.yml")
+
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            echo "✅ Excepciones del repositorio obtenidas"
+          else
+            echo "ℹ️  No hay excepciones específicas para este repo"
+            echo "exceptions: []" > .security/exceptions/repo.yml
+          fi
+
+      # ─────────────────────────────────────────────
+      # 4. Ejecutar Semgrep — JSON + SARIF
+      # ─────────────────────────────────────────────
+      - name: Run Semgrep (JSON output)
+        id: semgrep-json
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          # Determinar el alcance del escaneo
+          if [[ "${{ inputs.scan-scope }}" == "diff" && "${{ github.event_name }}" == "pull_request" ]]; then
+            BASELINE="origin/${{ github.base_ref }}"
+            echo "→ Escaneo diff contra ${BASELINE}"
+            SCOPE_FLAGS="--baseline-commit ${BASELINE}"
+          else
+            echo "→ Escaneo completo del repositorio"
+            SCOPE_FLAGS=""
+          fi
+
+          # Ejecutar Semgrep con salida JSON
+          set +e
+          semgrep scan \
+            --config ${{ inputs.semgrep-rules }} \
+            --json \
+            --output .security/results-raw.json \
+            --no-rewrite-rule-ids \
+            --metrics=off \
+            ${SCOPE_FLAGS} \
+            .
+          SEMGREP_EXIT=$?
+          set -e
+
+          echo "semgrep-exit-code=${SEMGREP_EXIT}" >> "$GITHUB_OUTPUT"
+          echo "→ Semgrep completado con código ${SEMGREP_EXIT}"
+
+      - name: Run Semgrep (SARIF output)
+        if: inputs.upload-sarif == true
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          semgrep scan \
+            --config ${{ inputs.semgrep-rules }} \
+            --sarif \
+            --output .security/results.sarif \
+            --metrics=off \
+            . || true
+
+      # ─────────────────────────────────────────────
+      # 5. Procesar resultados: filtrar excepciones, generar tabla
+      # ─────────────────────────────────────────────
+      - name: Process results and apply exceptions
+        id: process-results
+        env:
+          FAIL_ON_SEVERITY: ${{ inputs.fail-on-severity }}
+          REPORT_ONLY: ${{ inputs.report-only }}
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_SHA: ${{ github.sha }}
+          GH_REF: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import json
+          import yaml
+          import os
+          import sys
+          from datetime import datetime
+
+          SEVERITY_ORDER = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "WARNING": 0, "INFO": 0}
+          SEVERITY_EMOJI = {
+              "CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡",
+              "LOW": "🔵", "WARNING": "⚪", "INFO": "⚪"
+          }
+          FAIL_ON_SEVERITY = os.environ.get("FAIL_ON_SEVERITY", "high").upper()
+          REPORT_ONLY = os.environ.get("REPORT_ONLY", "false").lower() == "true"
+
+          # Cargar resultados de Semgrep
+          try:
+              with open(".security/results-raw.json") as f:
+                  semgrep_output = json.load(f)
+          except FileNotFoundError:
+              print("❌ No se encontró el archivo de resultados de Semgrep")
+              sys.exit(1)
+
+          findings = semgrep_output.get("results", [])
+          errors = semgrep_output.get("errors", [])
+
+          # Cargar excepciones
+          exceptions = []
+          for exc_file in [".security/exceptions/global.yml", ".security/exceptions/repo.yml"]:
+              try:
+                  with open(exc_file) as f:
+                      data = yaml.safe_load(f) or {}
+                      exceptions.extend(data.get("exceptions", []))
+              except FileNotFoundError:
+                  pass
+
+          def is_excepted(finding):
+              """Comprueba si un hallazgo está en la lista de excepciones aprobadas."""
+              for exc in exceptions:
+                  rule_match = exc.get("rule_id") in (finding.get("check_id", ""), "*")
+                  path_match = exc.get("path", "*") in (finding.get("path", ""), "*")
+                  if rule_match and path_match:
+                      # Validar que la excepción no haya expirado
+                      expiry = exc.get("expires")
+                      if expiry and datetime.strptime(expiry, "%Y-%m-%d") < datetime.now():
+                          print(f"⚠️  Excepción expirada: {exc.get('rule_id')} en {exc.get('path')}")
+                          return False
+                      return True
+              return False
+
+          # Filtrar hallazgos
+          active_findings = []
+          excepted_findings = []
+          for finding in findings:
+              if is_excepted(finding):
+                  excepted_findings.append(finding)
+              else:
+                  active_findings.append(finding)
+
+          # Contar por severidad
+          counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "WARNING": 0, "INFO": 0}
+          for f in active_findings:
+              sev = f.get("extra", {}).get("severity", "WARNING").upper()
+              counts[sev] = counts.get(sev, 0) + 1
+
+          # Ordenar por severidad
+          active_findings.sort(
+              key=lambda f: SEVERITY_ORDER.get(
+                  f.get("extra", {}).get("severity", "WARNING").upper(), 0
+              ),
+              reverse=True
+          )
+
+          # Generar tabla Markdown
+          total = len(active_findings)
+          excepted_count = len(excepted_findings)
+          repo = os.environ.get("GH_REPOSITORY", "")
+          sha = os.environ.get("GH_SHA", "")[:8]
+          ref = os.environ.get("GH_REF", "")
+          timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+
+          lines = []
+          lines.append("## 🔍 Semgrep Security Scan — Resultados")
+          lines.append("")
+          lines.append(f"**Repositorio**: `{repo}` | **Rama**: `{ref}` | **Commit**: `{sha}` | **Fecha**: {timestamp}")
+          lines.append("")
+
+          # Badge de estado
+          if counts["CRITICAL"] > 0:
+              badge = "🔴 BLOQUEADO — Vulnerabilidades Críticas"
+          elif counts["HIGH"] > 0 and SEVERITY_ORDER.get(FAIL_ON_SEVERITY, 0) <= 3:
+              badge = "🟠 BLOQUEADO — Vulnerabilidades Altas"
+          else:
+              badge = "✅ APROBADO" if total == 0 else "🟡 CON ADVERTENCIAS"
+
+          lines.append(f"### Estado: {badge}")
+          lines.append("")
+
+          # Tabla de resumen
+          lines.append("### 📊 Resumen")
+          lines.append("")
+          lines.append("| 🔴 Críticas | 🟠 Altas | 🟡 Medias | 🔵 Bajas | ⚪ Info | ✅ Exceptuadas |")
+          lines.append("|:-----------:|:--------:|:---------:|:--------:|:-------:|:-------------:|")
+          lines.append(f"| **{counts['CRITICAL']}** | **{counts['HIGH']}** | {counts['MEDIUM']} | {counts['LOW']} | {counts.get('INFO', 0) + counts.get('WARNING', 0)} | {excepted_count} |")
+          lines.append("")
+
+          if active_findings:
+              lines.append("### 🚨 Hallazgos Activos")
+              lines.append("")
+              lines.append("| # | Severidad | Regla | Archivo | Línea | Descripción |")
+              lines.append("|---|-----------|-------|---------|-------|-------------|")
+
+              for i, finding in enumerate(active_findings[:50], 1):  # Limitar a 50 en PR
+                  sev = finding.get("extra", {}).get("severity", "WARNING").upper()
+                  emoji = SEVERITY_EMOJI.get(sev, "⚪")
+                  rule = finding.get("check_id", "unknown").split(".")[-1]
+                  path = finding.get("path", "unknown")
+                  if len(path) > 40:
+                      path = "..." + path[-37:]
+                  line = finding.get("start", {}).get("line", "?")
+                  message = finding.get("extra", {}).get("message", "")[:80]
+                  if len(finding.get("extra", {}).get("message", "")) > 80:
+                      message += "…"
+
+                  lines.append(f"| {i} | {emoji} {sev} | `{rule}` | `{path}` | {line} | {message} |")
+
+              if len(active_findings) > 50:
+                  lines.append(f"| … | | | | | *+{len(active_findings) - 50} hallazgos más. Ver el artefacto completo.* |")
+
+          else:
+              lines.append("### ✅ Sin hallazgos activos")
+              lines.append("")
+              lines.append("> No se encontraron vulnerabilidades activas. ¡Buen trabajo! 🎉")
+
+          if excepted_finding := excepted_findings:
+              lines.append("")
+              lines.append(f"<details><summary>📋 {excepted_count} hallazgos exceptuados (aprobados)</summary>")
+              lines.append("")
+              lines.append("| Regla | Archivo | Motivo |")
+              lines.append("|-------|---------|--------|")
+              for finding in excepted_finding[:20]:
+                  rule = finding.get("check_id", "unknown").split(".")[-1]
+                  path = finding.get("path", "unknown")
+                  lines.append(f"| `{rule}` | `{path}` | Ver security-exceptions |")
+              lines.append("")
+              lines.append("</details>")
+
+          if errors:
+              lines.append("")
+              lines.append(f"> ⚠️ **{len(errors)} errores** durante el análisis. Algunos archivos podrían no haberse analizado.")
+
+          markdown_report = "\n".join(lines)
+
+          # Guardar para el siguiente paso
+          with open(".security/report.md", "w") as f:
+              f.write(markdown_report)
+
+          # Outputs para GitHub Actions
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"findings-count={total}\n")
+              f.write(f"critical-count={counts['CRITICAL']}\n")
+              f.write(f"high-count={counts['HIGH']}\n")
+
+          # Escribir resumen al GITHUB_STEP_SUMMARY
+          with open(os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null"), "w") as f:
+              f.write(markdown_report)
+
+          print(markdown_report)
+
+          # Determinar si debe fallar
+          if REPORT_ONLY:
+              print("\nℹ️  Modo report-only: no se bloquea el pipeline")
+              sys.exit(0)
+
+          fail_threshold = SEVERITY_ORDER.get(FAIL_ON_SEVERITY, 3)
+          should_fail = any(
+              SEVERITY_ORDER.get(sev, 0) >= fail_threshold and count > 0
+              for sev, count in counts.items()
+          )
+
+          if should_fail:
+              print(f"\n❌ Security gate fallido: se encontraron hallazgos >= {FAIL_ON_SEVERITY}")
+              sys.exit(1)
+          else:
+              print(f"\n✅ Security gate aprobado")
+              sys.exit(0)
+          PYTHON_SCRIPT
+
+      # ─────────────────────────────────────────────
+      # 6. Subir SARIF al Security tab de GitHub
+      # ─────────────────────────────────────────────
+      - name: Upload SARIF to GitHub Security
+        if: inputs.upload-sarif == true && always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .security/results.sarif
+          category: semgrep
+        continue-on-error: true  # No fallar si GHAS no está habilitado
+
+      # ─────────────────────────────────────────────
+      # 7. Comentar en Pull Request con la tabla visual
+      # ─────────────────────────────────────────────
+      - name: Post PR comment with findings table
+        if: github.event_name == 'pull_request' && always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: semgrep-results
+          path: .security/report.md
+        continue-on-error: true
+
+      # ─────────────────────────────────────────────
+      # 8. Crear GitHub Issues para hallazgos críticos/altos (opcional)
+      # ─────────────────────────────────────────────
+      - name: Create GitHub Issues for findings
+        if: inputs.create-issues == true && steps.process-results.outputs.findings-count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINDINGS_COUNT: ${{ steps.process-results.outputs.findings-count }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import json
+          import subprocess
+          import os
+
+          with open(".security/results-raw.json") as f:
+              results = json.load(f)
+
+          created = 0
+          for finding in results.get("results", []):
+              sev = finding.get("extra", {}).get("severity", "LOW").upper()
+              if sev not in ("CRITICAL", "HIGH"):
+                  continue
+
+              rule = finding.get("check_id", "unknown")
+              path = finding.get("path", "unknown")
+              line = finding.get("start", {}).get("line", "?")
+              message = finding.get("extra", {}).get("message", "")
+
+              title = f"[Semgrep] {sev}: {rule.split('.')[-1]} en {path}"
+              body = f"""## 🔐 Vulnerabilidad detectada por Semgrep
+
+          **Severidad**: {sev}
+          **Regla**: `{rule}`
+          **Archivo**: `{path}:{line}`
+          **Commit**: `{os.environ.get('GITHUB_SHA', '')[:8]}`
+
+          ### Descripción
+          {message}
+
+          ### Remediación
+          Consulta la documentación de la regla en: https://semgrep.dev/r/{rule}
+
+          ### Falso positivo?
+          Si crees que esto es un falso positivo, abre una solicitud de excepción en:
+          `amazing-protection/security-exceptions`
+
+          ---
+          *Generado automáticamente por el pipeline de Semgrep.*
+          """
+
+              result = subprocess.run(
+                  ["gh", "issue", "create",
+                   "--title", title,
+                   "--body", body,
+                   "--label", "security,semgrep",
+                   "--assignee", "@me"],
+                  capture_output=True, text=True, env=os.environ
+              )
+              if result.returncode == 0:
+                  created += 1
+                  print(f"✅ Issue creado: {title}")
+              else:
+                  print(f"⚠️  No se pudo crear issue: {result.stderr}")
+
+          print(f"\n→ {created} issues creados")
+          PYTHON_SCRIPT
+
+      # ─────────────────────────────────────────────
+      # 9. Subir reporte completo como artefacto
+      # ─────────────────────────────────────────────
+      - name: Upload full results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results-${{ github.run_number }}
+          path: |
+            .security/results-raw.json
+            .security/results.sarif
+            .security/report.md
+          retention-days: 90
+          if-no-files-found: warn
