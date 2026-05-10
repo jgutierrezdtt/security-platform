@@ -31,7 +31,7 @@ SLSA responde estas preguntas con **provenance**: metadatos firmados criptográf
 | **L3** | Build aislado y verificable | Build y provenance en jobs separados, firma Sigstore |
 | **L4** | Hermético y reproducible | Build completamente hermético (futuro) |
 
-> **Amazing-protection apunta a SLSA L3** para todos los releases de producción.
+> **jgutierrezdtt apunta a SLSA L3** para todos los releases de producción.
 
 ---
 
@@ -355,7 +355,213 @@ jobs:
 
 ---
 
-## 9. Checklist de SLSA
+## 9. Monitorización y alertas de SLSA
+
+SLSA solo se ejecuta en releases, no en PRs. Eso significa que si falla, no hay nadie mirando activamente el PR — el error puede pasar desapercibido. Esta sección explica cómo detectar fallos y cómo reaccionar.
+
+### 9.1 Dónde aparecen los errores de SLSA
+
+**En GitHub Actions (principal):**
+
+```
+Repositorio → Actions → Workflows → "Release with SLSA L3"
+```
+
+Si el workflow falla, el release queda creado pero **sin el provenance adjunto**. El artefacto existe, pero no puede ser verificado por los consumidores.
+
+**En el release de GitHub:**
+
+```
+Repositorio → Releases → [release concreto]
+```
+
+Si el job de provenance falló, el archivo `.intoto.jsonl` no estará entre los assets del release. La ausencia de ese archivo es la señal de fallo.
+
+**Comprobación rápida:**
+```bash
+# Verificar que el provenance existe en el último release
+REPO="jgutierrezdtt/mi-repo"
+gh release view --repo "$REPO" \
+  --json assets \
+  --jq '.assets[].name' | grep -q ".intoto.jsonl" \
+  && echo "✅ Provenance presente" \
+  || echo "❌ Provenance AUSENTE — el release no tiene SLSA L3"
+```
+
+### 9.2 Fallos más comunes y cómo resolverlos
+
+**Fallo 1: Job de provenance falla con "token permissions"**
+
+```
+Error: Unhandled error: Error: The ACTIONS_ID_TOKEN_REQUEST_URL is not set
+```
+
+Causa: El job de provenance necesita `id-token: write` para firmar con Sigstore.
+
+Solución: En el workflow caller, asegúrate de que el job que llama al generador SLSA tiene este permiso:
+```yaml
+permissions:
+  id-token: write     # Obligatorio para firmar con Sigstore
+  contents: write     # Para subir assets al release
+  actions: read       # Para leer el workflow del repo
+```
+
+---
+
+**Fallo 2: `slsa-github-generator` devuelve "builder not found"**
+
+```
+Error: builder not found for: https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+```
+
+Causa: Se usó una versión de `slsa-github-generator` que no existe o cuya firma Sigstore ha cambiado.
+
+Solución: Verifica que la versión en el workflow es válida:
+```bash
+# Ver las versiones publicadas
+gh release list --repo slsa-framework/slsa-github-generator --limit 5
+```
+
+Y referencia siempre por tag **y** hash:
+```yaml
+uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+# Con hash para máxima seguridad:
+# uses: slsa-framework/slsa-github-generator/...@a1b2c3d4...
+```
+
+---
+
+**Fallo 3: El job de build pasa pero el job de provenance falla silenciosamente**
+
+El release se crea con el artefacto pero sin el `.intoto.jsonl`. El workflow marca el run como "parcialmente fallido" (naranja, no rojo) si el job de provenance tiene `continue-on-error`.
+
+**Importante:** El job de provenance NO debe tener `continue-on-error: true`. Si falla, el pipeline debe fallar.
+
+---
+
+**Fallo 4: `slsa-verifier` rechaza el artefacto en el deployment**
+
+```
+FAILED: SLSA verification failed: provenance not found for artifact
+```
+
+Causas y soluciones:
+
+| Causa | Diagnóstico | Solución |
+|-------|-------------|---------|
+| El hash del artefacto no coincide | El binario fue modificado después del build | Descargar de nuevo del release original |
+| El provenance es de otro commit | Se reusó un provenance de otro release | Descargar el `.intoto.jsonl` del mismo release |
+| `--source-uri` incorrecto | El repo o la rama especificados no coinciden | Usar exactamente `github.com/org/repo` |
+| Sigstore timestamp expirado | El provenance tiene más de 90 días y Fulcio cambió | Verificar con `--skip-tlog-verification` (solo para diagnóstico) |
+
+### 9.3 Configurar alertas automáticas cuando un release falla
+
+Por defecto, GitHub no crea una alerta ni un issue si el workflow de release falla. Para detectarlo automáticamente:
+
+**Opción A — Notificación por email (GitHub nativo):**
+```
+Repositorio → Settings → Notifications → Workflow runs → "Failed workflows only"
+```
+Esto notifica al repo admin. Suficiente para repos pequeños.
+
+**Opción B — Crear un issue automáticamente cuando el release falla:**
+
+Añadir este job al workflow de release en `security-platform`:
+```yaml
+  notify-on-failure:
+    name: Notify on SLSA failure
+    runs-on: ubuntu-latest
+    needs: [build, provenance, verify]
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - name: Create issue on SLSA failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[SLSA] Fallo en release ${context.ref} — provenance no generado`,
+              body: `## Release sin SLSA L3\n\n` +
+                    `El workflow de release falló y el provenance SLSA no se generó.\n\n` +
+                    `**Release:** \`${context.ref}\`\n` +
+                    `**Run:** ${run_url}\n\n` +
+                    `### Impacto\n` +
+                    `Los consumidores que verifiquen el artefacto con \`slsa-verifier\` **fallarán**.\n\n` +
+                    `### Acción requerida\n` +
+                    `1. Revisar el log del run enlazado\n` +
+                    `2. Corregir el problema\n` +
+                    `3. Crear un nuevo release (no reutilizar el tag existente)`,
+              labels: ['security', 'slsa', 'release-failure'],
+              assignees: ['security-team']
+            });
+```
+
+**Opción C — Webhook a Slack/Teams:**
+
+```yaml
+  notify-on-failure:
+    needs: [build, provenance, verify]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "❌ SLSA release fallido en ${{ github.repository }}",
+              "blocks": [{
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*❌ Release sin provenance SLSA*\nRepo: `${{ github.repository }}`\nTag: `${{ github.ref_name }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver run>"
+                }
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+```
+
+### 9.4 Auditoría periódica — Verificar que todos los releases tienen provenance
+
+El workflow `org-security-report` (lunes 03:00 UTC) puede ampliarse para comprobar si los últimos N releases de cada repo tienen el archivo `.intoto.jsonl`. Si detecta un release sin provenance, lo añade al reporte semanal.
+
+También puedes lanzarlo manualmente:
+```bash
+# Comprobar los últimos 5 releases de un repo
+gh release list --repo jgutierrezdtt/mi-repo --limit 5 --json tagName,assets \
+  --jq '.[] | {tag:.tagName, has_provenance: ([.assets[].name | test(".intoto.jsonl")] | any)}'
+```
+
+Salida esperada:
+```json
+{"tag": "v1.3.0", "has_provenance": true}
+{"tag": "v1.2.1", "has_provenance": true}
+{"tag": "v1.2.0", "has_provenance": false}   ← release problemático
+```
+
+### 9.5 Qué hacer si un release ya publicado no tiene provenance
+
+No se puede añadir el provenance a posteriori — el provenance está ligado al run de GitHub Actions que construyó el artefacto, y ese run no se puede repetir para el mismo commit con el mismo resultado firmado.
+
+**Opciones:**
+
+1. **Crear un nuevo release** con el mismo código pero un tag nuevo (ej. `v1.2.0-fixed`). El nuevo run genera un provenance válido.
+
+2. **Documentar en el release** que el provenance está ausente y por qué, para que los consumidores sean conscientes.
+
+3. **Notificar a los consumidores** que ya descargaron ese release, para que vuelvan a descargarlo desde el nuevo tag.
+
+> No elimines el release original si ya fue descargado — los consumidores que intenten verificar el hash del artefacto original necesitan que siga accesible.
+
+---
+
+## 10. Checklist de SLSA
 
 - [ ] **Workflow de build** usa `actions/checkout@v4` con hash pinned
 - [ ] **Job de provenance** está separado del job de build
@@ -365,6 +571,8 @@ jobs:
 - [ ] **slsa-verifier** integrado en el pipeline de deployment del consumidor
 - [ ] **OpenSSF Scorecard** ejecutándose semanalmente
 - [ ] **Todas las acciones de terceros** pinned por hash (Dependabot las actualiza)
+- [ ] **Alertas de fallo** configuradas (email, issue automático, o Slack)
+- [ ] **Verificación periódica** de que todos los releases tienen provenance
 
 ---
 
