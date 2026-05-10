@@ -1,11 +1,11 @@
-# 🔐 Security Platform — amazing-protection
+# Security Platform — amazing-protection
 
 > **Repositorio central de seguridad** para la organización `amazing-protection`.  
 > Proporciona workflows reutilizables, políticas de gobernanza, documentación técnica y templates listos para usar en cualquier repositorio de la organización.
 
 ---
 
-## 📋 Índice de tutoriales
+## Índice de tutoriales
 
 | # | Tutorial | Descripción |
 |---|----------|-------------|
@@ -22,29 +22,29 @@
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
 ```
 amazing-protection/
-├── security-platform/          ← Este repositorio
-│   ├── .github/workflows/
-│   │   └── reusable/           ← Workflows llamados por todos los repos
-│   │       ├── semgrep-scan.yml
-│   │       ├── dependabot-check.yml
-│   │       └── slsa-build.yml
-│   ├── config/semgrep/         ← Reglas Semgrep centralizadas
-│   ├── docs/tutorials/         ← 10 tutoriales técnicos
-│   └── templates/consumer/     ← Templates listos para copiar
-│
-└── security-exceptions/        ← Registro de excepciones (read-only)
-    ├── exceptions/global/      ← Falsos positivos globales
-    ├── exceptions/by-repo/     ← Excepciones por repositorio
-    └── schemas/                ← JSON Schema de validación
+ security-platform/          ← Este repositorio
+    .github/workflows/
+       reusable/           ← Workflows llamados por todos los repos
+           semgrep-scan.yml
+           dependabot-check.yml
+           slsa-build.yml
+    config/semgrep/         ← Reglas Semgrep centralizadas
+    docs/tutorials/         ← 10 tutoriales técnicos
+    templates/consumer/     ← Templates listos para copiar
+
+ security-exceptions/        ← Registro de excepciones (read-only)
+     exceptions/global/      ← Falsos positivos globales
+     exceptions/by-repo/     ← Excepciones por repositorio
+     schemas/                ← JSON Schema de validación
 ```
 
 ---
 
-## � Onboarding de repositorios
+## Onboarding de repositorios
 
 ### Escalar a 200 repos existentes (onboarding masivo)
 
@@ -88,7 +88,7 @@ gh workflow run detect-unconfigured-repos.yml --repo amazing-protection/security
 
 ---
 
-## �🚀 Quickstart para nuevos repositorios
+## Quickstart para nuevos repositorios
 
 ### 1. Copiar los templates al repositorio
 
@@ -136,7 +136,7 @@ jobs:
 
 ---
 
-## 📊 Estado de Seguridad de la Organización
+## Estado de Seguridad de la Organización
 
 > **Actualizado automáticamente** cada domingo a las 02:00 UTC por el [workflow de reporte](/.github/workflows/org-security-report.yml).  
 > Última actualización: `<!-- LAST_REPORT_DATE -->`
@@ -145,8 +145,8 @@ jobs:
 
 | Repositorio | Rama | Semgrep | Dependabot | SLSA | Críticas | Altas | Medias | Último Análisis |
 |-------------|------|---------|------------|------|----------|-------|--------|-----------------|
-| `security-platform` | `main` | ✅ Activo | ✅ Activo | ✅ L3 | 0 | 0 | 0 | <!-- DATE --> |
-| `security-exceptions` | `main` | ✅ Activo | ✅ Activo | — | 0 | 0 | 0 | <!-- DATE --> |
+| `security-platform` | `main` |  Activo |  Activo |  L3 | 0 | 0 | 0 | <!-- DATE --> |
+| `security-exceptions` | `main` |  Activo |  Activo | — | 0 | 0 | 0 | <!-- DATE --> |
 | *Añadir repos aquí* | | | | | | | | |
 
 > **Nota**: Esta tabla se genera automáticamente. Para añadir un repositorio al reporte, consulta [docs/tutorials/10-reporting.md](docs/tutorials/10-reporting.md).
@@ -155,14 +155,14 @@ jobs:
 
 | Símbolo | Significado |
 |---------|-------------|
-| ✅ Activo | Habilitado y funcionando correctamente |
-| ⚠️ Parcial | Configurado pero con advertencias |
-| ❌ Inactivo | No configurado o con errores |
+|  Activo | Habilitado y funcionando correctamente |
+|  Parcial | Configurado pero con advertencias |
+|  Inactivo | No configurado o con errores |
 | — | No aplica |
 
 ---
 
-## 🔧 Workflows Reutilizables
+## Workflows Reutilizables
 
 ### `reusable/semgrep-scan.yml`
 Escaneo SAST con Semgrep, integración con excepciones, tabla visual en PR y security gate.
@@ -196,25 +196,25 @@ Genera provenance SLSA Level 3 para artefactos de release usando el generador of
 
 ---
 
-## 📁 Templates disponibles
+## Templates disponibles
 
 ```
 templates/consumer/
-├── .github/
-│   ├── CODEOWNERS                    ← Propietarios de código
-│   ├── dependabot.yml                ← Configuración de Dependabot
-│   └── workflows/
-│       ├── security.yml              ← Pipeline principal de seguridad
-│       ├── dependabot-check.yml      ← Validación de Dependabot en PRs
-│       └── release.yml               ← Release con SLSA
-└── config/
-    └── semgrep/
-        └── .semgrepignore            ← Patrones de exclusión
+ .github/
+    CODEOWNERS                    ← Propietarios de código
+    dependabot.yml                ← Configuración de Dependabot
+    workflows/
+        security.yml              ← Pipeline principal de seguridad
+        dependabot-check.yml      ← Validación de Dependabot en PRs
+        release.yml               ← Release con SLSA
+ config/
+     semgrep/
+         .semgrepignore            ← Patrones de exclusión
 ```
 
 ---
 
-## 🔗 Referencias
+## Referencias
 
 - [Semgrep Documentation](https://semgrep.dev/docs/)
 - [SLSA Framework](https://slsa.dev/)
@@ -225,11 +225,11 @@ templates/consumer/
 
 ---
 
-## 🤝 Contribuciones
+## Contribuciones
 
 Solo el equipo `@amazing-protection/security-team` puede aprobar cambios en este repositorio.  
 Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para el proceso de contribución.
 
-## 📜 Licencia
+## Licencia
 
 Uso interno — amazing-protection. Consulta [LICENSE](LICENSE).

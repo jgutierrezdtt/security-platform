@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Platform — jgutierrezdtt</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --accent:    #58a6ff;
+      --accent-bg: #1f3a5f;
+      --ok:        #3fb950;
+      --warn:      #d29922;
+      --err:       #f85149;
+      --code-bg:   #1e2530;
+      --nav-w:     240px;
+      --font:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --mono:      "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Nav lateral ───────────────────────────────────── */
+    nav {
+      width: var(--nav-w);
+      min-width: var(--nav-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    nav .logo {
+      padding: 0 1.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    nav .logo span {
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+    nav .logo strong {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    nav ul { list-style: none; }
+    nav ul li a {
+      display: block;
+      padding: 0.4rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    nav ul li a:hover,
+    nav ul li a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(88,166,255,0.06);
+    }
+    nav ul li.section-label {
+      padding: 1rem 1.5rem 0.3rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    /* ── Contenido principal ───────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 900px;
+      padding: 3rem 3rem 6rem;
+    }
+
+    /* Header hero */
+    .hero {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2.5rem;
+      margin-bottom: 3rem;
+    }
+    .hero .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-bg);
+      padding: 0.25rem 0.65rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+    .hero p {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 600px;
+    }
+
+    /* Secciones */
+    section {
+      margin-bottom: 4rem;
+      scroll-margin-top: 1.5rem;
+    }
+    section h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    section h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 1.5rem 0 0.75rem;
+    }
+    section p { color: var(--muted); margin-bottom: 0.9rem; }
+    section ul, section ol {
+      color: var(--muted);
+      padding-left: 1.5rem;
+      margin-bottom: 0.9rem;
+    }
+    section li { margin-bottom: 0.35rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Código */
+    code {
+      font-family: var(--mono);
+      font-size: 0.82em;
+      background: var(--code-bg);
+      color: #79c0ff;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: #e6edf3;
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+
+    /* Tablas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.875rem;
+    }
+    th {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      text-align: left;
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* Cards de arquitectura */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+    .card h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .card ul li {
+      font-size: 0.82rem;
+      color: var(--muted);
+      padding: 0.2rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .card ul li::before {
+      content: "";
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Pills de estado */
+    .pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 100px;
+    }
+    .pill-ok   { background: rgba(63,185,80,0.15); color: var(--ok); }
+    .pill-warn { background: rgba(210,153,34,0.15); color: var(--warn); }
+    .pill-req  { background: rgba(88,166,255,0.12); color: var(--accent); }
+
+    /* Tutorial list */
+    .tutorial-list { list-style: none; padding: 0; }
+    .tutorial-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tutorial-list li:last-child { border-bottom: none; }
+    .tutorial-num {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      min-width: 1.8rem;
+    }
+    .tutorial-name {
+      font-weight: 500;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    .tutorial-desc { font-size: 0.82rem; color: var(--muted); }
+
+    /* Quickstart steps */
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .steps li::before {
+      content: counter(step);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 2rem;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+    .steps li > div { flex: 1; }
+    .steps li h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <span>jgutierrezdtt</span>
+    <strong>Security Platform</strong>
+  </div>
+  <ul>
+    <li><a href="#overview" class="active">Introduccion</a></li>
+    <li><a href="#architecture">Arquitectura</a></li>
+    <li class="section-label">Adopcion</li>
+    <li><a href="#onboarding">Onboarding masivo</a></li>
+    <li><a href="#quickstart">Quickstart</a></li>
+    <li class="section-label">Workflows</li>
+    <li><a href="#semgrep">Semgrep Scan</a></li>
+    <li><a href="#dependabot">Dependabot Check</a></li>
+    <li><a href="#slsa">SLSA Build</a></li>
+    <li class="section-label">Referencia</li>
+    <li><a href="#tutorials">Tutoriales (10)</a></li>
+    <li><a href="#templates">Templates</a></li>
+    <li><a href="#scripts">Scripts</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <div class="hero">
+    <span class="tag">Privado — jgutierrezdtt</span>
+    <h1>Security Platform</h1>
+    <p>
+      Repositorio central de seguridad. Proporciona workflows reutilizables, reglas Semgrep,
+      politicas de gobernanza y templates listos para aplicar en cualquier repositorio de la organizacion.
+    </p>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <h2>Que incluye</h2>
+    <div class="arch-grid">
+      <div class="card">
+        <h4>Workflows reutilizables</h4>
+        <ul>
+          <li>Semgrep SAST con security gate</li>
+          <li>Dependabot check y alertas</li>
+          <li>SLSA Level 3 provenance</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Gobernanza</h4>
+        <ul>
+          <li>10 tutoriales tecnicos detallados</li>
+          <li>Templates consumer listos para usar</li>
+          <li>Dashboard de seguridad de la org</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Escalabilidad</h4>
+        <ul>
+          <li>Script de onboarding masivo</li>
+          <li>Deteccion automatica de repos nuevos</li>
+          <li>Registro centralizado de excepciones</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Integraciones</h4>
+        <ul>
+          <li>GitHub Advanced Security (GHAS)</li>
+          <li>Semgrep Cloud Platform</li>
+          <li>OpenSSF Scorecard</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture">
+    <h2>Arquitectura del sistema</h2>
+    <p>
+      El sistema sigue un patron hub-and-spoke. Este repositorio actua como hub central;
+      los repositorios consumer llaman a los workflows reutilizables sin copiar codigo de seguridad.
+    </p>
+    <pre><code>jgutierrezdtt/
+├── security-platform/          ← Este repositorio (hub)
+│   ├── .github/workflows/
+│   │   └── reusable/           ← Llamados por todos los repos
+│   │       ├── semgrep-scan.yml
+│   │       ├── dependabot-check.yml
+│   │       └── slsa-build.yml
+│   ├── config/semgrep/         ← Reglas Semgrep centralizadas
+│   ├── docs/tutorials/         ← 10 tutoriales tecnicos
+│   ├── scripts/                ← Onboarding y reporte de org
+│   └── templates/consumer/     ← Templates para copiar
+│
+└── security-exceptions/        ← Registro de excepciones (read-only)
+    ├── exceptions/global/      ← Falsos positivos para toda la org
+    ├── exceptions/by-repo/     ← Excepciones por repositorio
+    └── schemas/                ← JSON Schema de validacion</code></pre>
+
+    <h3>Flujo de un Pull Request</h3>
+    <p>
+      Cuando un desarrollador abre un PR en un repositorio consumer, el workflow de seguridad
+      ejecuta Semgrep y Dependabot en paralelo, descarga las excepciones aprobadas,
+      genera una tabla visual en el propio PR y bloquea el merge si hay hallazgos
+      de severidad critica o alta sin excepcion aprobada.
+    </p>
+  </section>
+
+  <!-- ONBOARDING -->
+  <section id="onboarding">
+    <h2>Onboarding de repositorios</h2>
+
+    <h3>Escalar a repositorios existentes</h3>
+    <p>
+      El script <code>scripts/bulk-onboard.py</code> aplica los templates de seguridad
+      a todos los repos de la organizacion y abre un PR en cada uno, listo para que
+      cada equipo revise y mergee a su ritmo.
+    </p>
+    <pre><code># Simulacion sin crear PRs (recomendado primero)
+python3 scripts/bulk-onboard.py --org jgutierrezdtt --dry-run
+
+# Onboarding de todos los repos
+python3 scripts/bulk-onboard.py --org jgutierrezdtt
+
+# Solo repos especificos (fichero con uno por linea)
+python3 scripts/bulk-onboard.py --org jgutierrezdtt --repos-file repos.txt
+
+# Limitar para prueba
+python3 scripts/bulk-onboard.py --org jgutierrezdtt --limit 5</code></pre>
+
+    <h3>Deteccion de repos nuevos</h3>
+    <p>
+      El workflow <code>detect-unconfigured-repos.yml</code> se ejecuta cada lunes.
+      Si detecta repos sin el workflow de seguridad, crea un GitHub Issue asignado
+      al security-team con la lista completa. Los repos nuevos no pueden quedar sin
+      configurar sin que el equipo lo sepa.
+    </p>
+  </section>
+
+  <!-- QUICKSTART -->
+  <section id="quickstart">
+    <h2>Quickstart para un repositorio individual</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <h4>Copiar los templates</h4>
+          <pre><code>PLATFORM=jgutierrezdtt/security-platform
+
+gh api repos/${PLATFORM}/contents/templates/consumer \
+  --jq '.[] | .path' | while read file; do
+  gh api repos/${PLATFORM}/contents/${file} \
+    --jq '.content' | base64 -d > "${file#templates/consumer/}"
+done</code></pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4>Configurar los secretos requeridos</h4>
+          <pre><code>gh secret set EXCEPTIONS_READER_TOKEN --repo tu-org/tu-repo
+gh secret set SEMGREP_APP_TOKEN --repo tu-org/tu-repo   # opcional</code></pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4>Habilitar Code Scanning</h4>
+          <pre><code>gh api repos/tu-org/tu-repo/code-scanning/default-setup \
+  -X PATCH --field state=configured --field query_suite=security-extended</code></pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h4>Abrir el primer PR — el workflow se activa automaticamente</h4>
+          <p style="margin:0">El primer PR mostrara el comentario de Semgrep y el resumen de Dependabot.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- WORKFLOWS -->
+  <section id="semgrep">
+    <h2>Workflow: semgrep-scan.yml</h2>
+    <p>
+      Escaneo SAST con Semgrep. Descarga excepciones aprobadas del registro central,
+      filtra falsos positivos, genera tabla visual en el PR y aplica security gate
+      configurable por severidad.
+    </p>
+    <table>
+      <thead><tr><th>Input</th><th>Tipo</th><th>Default</th><th>Descripcion</th></tr></thead>
+      <tbody>
+        <tr><td><code>scan-scope</code></td><td>string</td><td>diff</td><td>Escanear solo el diff o el repo completo</td></tr>
+        <tr><td><code>fail-on-severity</code></td><td>string</td><td>high</td><td>Severidad minima para fallar el check</td></tr>
+        <tr><td><code>upload-sarif</code></td><td>boolean</td><td>true</td><td>Subir resultados al Security tab de GitHub</td></tr>
+        <tr><td><code>create-issues</code></td><td>boolean</td><td>false</td><td>Crear GitHub Issues por hallazgo</td></tr>
+        <tr><td><code>report-only</code></td><td>boolean</td><td>false</td><td>Generar reporte sin bloquear el PR</td></tr>
+        <tr><td><code>exceptions-repo</code></td><td>string</td><td>jgutierrezdtt/security-exceptions</td><td>Repositorio de excepciones</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Secret</th><th>Requerido</th><th>Descripcion</th></tr></thead>
+      <tbody>
+        <tr><td><code>SEMGREP_APP_TOKEN</code></td><td><span class="pill">Opcional</span></td><td>Token de Semgrep Cloud Platform</td></tr>
+        <tr><td><code>EXCEPTIONS_READER_TOKEN</code></td><td><span class="pill pill-req">Requerido</span></td><td>Fine-grained PAT read-only al repo de excepciones</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="dependabot">
+    <h2>Workflow: dependabot-check.yml</h2>
+    <p>
+      Valida el estado de las alertas de Dependabot y bloquea el pipeline si hay
+      vulnerabilidades criticas no resueltas. Genera tabla visual con conteo por
+      severidad y pega un comentario sticky en el PR.
+    </p>
+    <table>
+      <thead><tr><th>Input</th><th>Default</th><th>Descripcion</th></tr></thead>
+      <tbody>
+        <tr><td><code>fail-on-critical</code></td><td>true</td><td>Fallar si hay alertas CRITICAL abiertas</td></tr>
+        <tr><td><code>fail-on-high</code></td><td>true</td><td>Fallar si hay alertas HIGH abiertas</td></tr>
+        <tr><td><code>max-critical</code></td><td>0</td><td>Numero maximo de alertas CRITICAL permitidas</td></tr>
+        <tr><td><code>report-only</code></td><td>false</td><td>Solo reportar sin bloquear</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="slsa">
+    <h2>Workflow: slsa-build.yml</h2>
+    <p>
+      Genera provenance SLSA Level 3 para artefactos de release usando el generador
+      oficial de la SLSA Framework con Sigstore/Cosign para firma sin clave privada.
+      Solo se ejecuta en eventos de release o tag.
+    </p>
+    <table>
+      <thead><tr><th>Input</th><th>Requerido</th><th>Descripcion</th></tr></thead>
+      <tbody>
+        <tr><td><code>artifact-name</code></td><td><span class="pill pill-req">Si</span></td><td>Nombre del artefacto a firmar</td></tr>
+        <tr><td><code>artifact-path</code></td><td><span class="pill pill-req">Si</span></td><td>Ruta al artefacto en el runner</td></tr>
+        <tr><td><code>build-command</code></td><td><span class="pill pill-req">Si</span></td><td>Comando de build a ejecutar</td></tr>
+        <tr><td><code>go-version</code></td><td><span class="pill">Opcional</span></td><td>Version de Go si el proyecto usa Go</td></tr>
+        <tr><td><code>node-version</code></td><td><span class="pill">Opcional</span></td><td>Version de Node.js si aplica</td></tr>
+        <tr><td><code>python-version</code></td><td><span class="pill">Opcional</span></td><td>Version de Python si aplica</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- TUTORIALS -->
+  <section id="tutorials">
+    <h2>Tutoriales tecnicos</h2>
+    <p>Diez guias paso a paso para configurar y operar la plataforma de seguridad.</p>
+    <ul class="tutorial-list">
+      <li>
+        <span class="tutorial-num">01</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/01-repository-protection.md">Proteccion de Repositorios</a></div>
+          <div class="tutorial-desc">GHAS, secret scanning, push protection y reportes de vulnerabilidades privados</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">02</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/02-branch-protection.md">Proteccion de Ramas</a></div>
+          <div class="tutorial-desc">Branch protection rules, rulesets a nivel de organizacion e IaC con Terraform</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">03</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/03-roles-and-permissions.md">Roles y Permisos</a></div>
+          <div class="tutorial-desc">Teams, custom roles, Fine-grained PATs y permisos minimos en workflows</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">04</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/04-pull-request-approvals.md">Aprobacion de Pull Requests</a></div>
+          <div class="tutorial-desc">CODEOWNERS, required reviews, dual control para archivos criticos</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">05</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/05-slsa-pipelines.md">SLSA en Pipelines</a></div>
+          <div class="tutorial-desc">Supply chain integrity con SLSA Level 3 usando el workflow oficial</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">06</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/06-dependabot-activation.md">Activacion de Dependabot</a></div>
+          <div class="tutorial-desc">Alerts, security updates, version updates y SLA de respuesta</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">07</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/07-semgrep-activation.md">Activacion de Semgrep</a></div>
+          <div class="tutorial-desc">Integracion SARIF, Code Scanning, reglas propias y Semgrep Cloud Platform</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">08</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/08-exception-management.md">Gestion de Excepciones</a></div>
+          <div class="tutorial-desc">Falsos positivos, proceso de aprobacion y ciclo de vida con expiracion</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">09</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/09-security-gates.md">Security Gates</a></div>
+          <div class="tutorial-desc">Bloqueo de PRs por vulnerabilidades criticas y altas, politica configurable</div>
+        </div>
+      </li>
+      <li>
+        <span class="tutorial-num">10</span>
+        <div>
+          <div class="tutorial-name"><a href="tutorials/10-reporting.md">Reporting de Seguridad</a></div>
+          <div class="tutorial-desc">Dashboard de org, comentarios en PR, Job Summaries y artefactos</div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- TEMPLATES -->
+  <section id="templates">
+    <h2>Templates consumer</h2>
+    <p>Archivos listos para copiar en cualquier repositorio consumer.</p>
+    <table>
+      <thead><tr><th>Archivo</th><th>Proposito</th></tr></thead>
+      <tbody>
+        <tr><td><code>.github/workflows/security.yml</code></td><td>Pipeline principal: Semgrep + Dependabot + security gate</td></tr>
+        <tr><td><code>.github/workflows/release.yml</code></td><td>Release con SLSA Level 3 provenance</td></tr>
+        <tr><td><code>.github/dependabot.yml</code></td><td>Actualizacion automatica de dependencias (todos los ecosistemas)</td></tr>
+        <tr><td><code>.github/CODEOWNERS</code></td><td>Propietarios de codigo por directorio</td></tr>
+        <tr><td><code>.github/PULL_REQUEST_TEMPLATE.md</code></td><td>Template de PR con checklist de seguridad</td></tr>
+        <tr><td><code>.semgrepignore</code></td><td>Patrones de archivos excluidos del analisis</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SCRIPTS -->
+  <section id="scripts">
+    <h2>Scripts</h2>
+    <table>
+      <thead><tr><th>Script</th><th>Uso</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>scripts/bulk-onboard.py</code></td>
+          <td>Onboarding masivo: aplica templates y abre PRs en todos los repos de la org</td>
+        </tr>
+        <tr>
+          <td><code>scripts/generate-org-report.py</code></td>
+          <td>Genera el dashboard de seguridad de la org y actualiza el README automaticamente</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <span>jgutierrezdtt / security-platform</span>
+    <span>Uso interno — privado</span>
+  </footer>
+
+</main>
+
+<script>
+  // Highlight nav item on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
