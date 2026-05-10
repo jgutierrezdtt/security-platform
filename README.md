@@ -8,8 +8,7 @@
 ## Índice de tutoriales
 
 | # | Tutorial | Descripción |
-|---|----------|-------------|
-| 01 | [Protección de Repositorios](docs/tutorials/01-repository-protection.md) | Configuración de visibilidad, GHAS, secret scanning y push protection |
+|---|----------|-------------|| 00 | [Referencia del sistema](docs/tutorials/00-system-reference.md) | Cuando se ejecuta cada proceso, diagramas de flujo, SLSA y como se reportan los resultados || 01 | [Protección de Repositorios](docs/tutorials/01-repository-protection.md) | Configuración de visibilidad, GHAS, secret scanning y push protection |
 | 02 | [Protección de Ramas](docs/tutorials/02-branch-protection.md) | Branch protection rules, rulesets y configuración avanzada |
 | 03 | [Roles y Permisos](docs/tutorials/03-roles-and-permissions.md) | GitHub roles, teams y permisos granulares en la organización |
 | 04 | [Aprobación de Pull Requests](docs/tutorials/04-pull-request-approvals.md) | CODEOWNERS, required reviews y procesos de aprobación |
