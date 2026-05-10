@@ -21,6 +21,7 @@
 | [08 — Gestion de Excepciones](docs/tutorials/08-exception-management.md) | Falsos positivos, excepciones y flujo de aprobacion |
 | [09 — Security Gates](docs/tutorials/09-security-gates.md) | Bloqueo de PRs por vulnerabilidades criticas y altas |
 | [10 — Reporting de Seguridad](docs/tutorials/10-reporting.md) | Dashboards, Job Summaries y reportes automaticos |
+| [11 — Gobierno de Vulnerabilidades](docs/tutorials/11-vulnerability-governance.md) | SLAs, ownership, escalado, compliance y metricas del programa |
 
 ---
 

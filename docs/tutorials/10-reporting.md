@@ -323,7 +323,7 @@ Los resultados se publican en [securityscorecards.dev](https://securityscorecard
 
 ---
 
-## 🎉 Has completado todos los tutoriales
+## 🎉 Has completado los tutoriales de configuración
 
 ### Resumen de lo implementado
 
@@ -342,8 +342,14 @@ Los resultados se publican en [securityscorecards.dev](https://securityscorecard
 
 ### Próximos pasos recomendados
 
-1. **Incorporar nuevos repos**: Copia los templates de `templates/consumer/` y sigue el [Quickstart del README](../../README.md#-quickstart-para-nuevos-repositorios)
+1. **Incorporar nuevos repos**: Usa `security-consumer-template` como base para nuevos repos o copia `.github/workflows/security.yml` en repos existentes
 2. **Revisar excepciones existentes**: Asegúrate de que ninguna haya expirado
 3. **Configurar notificaciones**: Integra el reporting con Slack, Teams o email
 4. **Revisar el OpenSSF Scorecard**: Mejorar la puntuación de cada repositorio
 5. **Evaluar SLSA L4**: Cuando el ecosistema madure, considerar builds herméticos con Bazel
+
+---
+
+## Siguiente paso
+
+➡️ [Tutorial 11 — Gobierno de Vulnerabilidades](11-vulnerability-governance.md) — SLAs, ownership, escalado, compliance y métricas del programa
