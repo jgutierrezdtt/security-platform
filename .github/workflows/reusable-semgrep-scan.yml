@@ -29,7 +29,7 @@ on:
       semgrep-rules:
         description: "Reglas Semgrep adicionales (p/ej: p/owasp-top-ten p/ci)"
         type: string
-        default: "p/default p/security-audit p/owasp-top-ten"
+        default: "auto"
       report-only:
         description: "Solo reportar, nunca fallar el pipeline (útil en branches de feature)"
         type: boolean
@@ -178,10 +178,21 @@ jobs:
             SCOPE_FLAGS=""
           fi
 
+          # Construir flags --config para cada regla
+          CONFIG_FLAGS=""
+          for rule in ${{ inputs.semgrep-rules }}; do
+            CONFIG_FLAGS="$CONFIG_FLAGS --config $rule"
+          done
+
+          # Si hay reglas custom locales, añadirlas también
+          if [[ -f ".github/config/semgrep/rules.yml" ]]; then
+            CONFIG_FLAGS="$CONFIG_FLAGS --config .github/config/semgrep/rules.yml"
+          fi
+
           # Ejecutar Semgrep con salida JSON
           set +e
           semgrep scan \
-            --config ${{ inputs.semgrep-rules }} \
+            $CONFIG_FLAGS \
             --json \
             --output .security/results-raw.json \
             --no-rewrite-rule-ids \
@@ -199,8 +210,15 @@ jobs:
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
+          CONFIG_FLAGS=""
+          for rule in ${{ inputs.semgrep-rules }}; do
+            CONFIG_FLAGS="$CONFIG_FLAGS --config $rule"
+          done
+          if [[ -f ".github/config/semgrep/rules.yml" ]]; then
+            CONFIG_FLAGS="$CONFIG_FLAGS --config .github/config/semgrep/rules.yml"
+          fi
           semgrep scan \
-            --config ${{ inputs.semgrep-rules }} \
+            $CONFIG_FLAGS \
             --sarif \
             --output .security/results.sarif \
             --metrics=off \
