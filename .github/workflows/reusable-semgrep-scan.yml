@@ -29,7 +29,7 @@ on:
       semgrep-rules:
         description: "Reglas Semgrep adicionales (p/ej: p/owasp-top-ten p/ci)"
         type: string
-        default: "auto"
+        default: "p/default"
       report-only:
         description: "Solo reportar, nunca fallar el pipeline (útil en branches de feature)"
         type: boolean
@@ -201,6 +201,12 @@ jobs:
             .
           SEMGREP_EXIT=$?
           set -e
+
+          # Si semgrep no generó salida JSON (fallo fatal), crear archivo vacío
+          if [[ ! -f ".security/results-raw.json" ]]; then
+            echo '{"results":[],"errors":[],"paths":{"scanned":[]}}' > .security/results-raw.json
+            echo "⚠️  Semgrep no generó resultados JSON — usando archivo vacío (exit code: ${SEMGREP_EXIT})"
+          fi
 
           echo "semgrep-exit-code=${SEMGREP_EXIT}" >> "$GITHUB_OUTPUT"
           echo "→ Semgrep completado con código ${SEMGREP_EXIT}"
