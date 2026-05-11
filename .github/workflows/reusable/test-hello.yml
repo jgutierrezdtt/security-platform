@@ -1,0 +1,19 @@
+name: Reusable Test Hello
+
+on:
+  workflow_call:
+    inputs:
+      message:
+        type: string
+        default: "Hello"
+    secrets:
+      OPTIONAL_TOKEN:
+        required: false
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: echo "${{ inputs.message }} from reusable workflow"
