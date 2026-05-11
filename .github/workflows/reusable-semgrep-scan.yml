@@ -104,8 +104,16 @@ jobs:
         run: |
           mkdir -p .security/exceptions
 
+          # Si no hay token, saltar gracefully
+          if [[ -z "${EXCEPTIONS_READER_TOKEN}" ]]; then
+            echo "ℹ️  EXCEPTIONS_READER_TOKEN no configurado — omitiendo excepciones globales"
+            echo "global-exceptions-loaded=false" >> "$GITHUB_OUTPUT"
+            echo "exceptions: []" > .security/exceptions/global.yml
+            exit 0
+          fi
+
           echo "→ Obteniendo excepciones globales de ${EXCEPTIONS_REPO}..."
-          HTTP_CODE=$(curl -sfL \
+          HTTP_CODE=$(curl -sL \
             -H "Authorization: Bearer ${EXCEPTIONS_READER_TOKEN}" \
             -H "Accept: application/vnd.github.raw+json" \
             -w "%{http_code}" \
@@ -130,8 +138,15 @@ jobs:
           REPO_SLUG="${{ github.repository }}"
           REPO_SLUG="${REPO_SLUG//\//__}"
 
+          # Si no hay token, saltar gracefully
+          if [[ -z "${EXCEPTIONS_READER_TOKEN}" ]]; then
+            echo "ℹ️  EXCEPTIONS_READER_TOKEN no configurado — omitiendo excepciones por repo"
+            echo "exceptions: []" > .security/exceptions/repo.yml
+            exit 0
+          fi
+
           echo "→ Obteniendo excepciones específicas de ${REPO_SLUG}..."
-          HTTP_CODE=$(curl -sfL \
+          HTTP_CODE=$(curl -sL \
             -H "Authorization: Bearer ${EXCEPTIONS_READER_TOKEN}" \
             -H "Accept: application/vnd.github.raw+json" \
             -w "%{http_code}" \
