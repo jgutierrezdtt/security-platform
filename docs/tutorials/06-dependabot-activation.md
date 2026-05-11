@@ -272,7 +272,7 @@ El workflow `reusable/dependabot-check.yml` verifica el estado de Dependabot en 
 # En tu repo consumer — .github/workflows/security.yml
 jobs:
   dependabot-check:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-dependabot-check.yml@main
     with:
       fail-on-critical: true   # Bloquear PR si hay alertas críticas sin resolver
       fail-on-high: true       # Bloquear PR si hay alertas altas sin resolver

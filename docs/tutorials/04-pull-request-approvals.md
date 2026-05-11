@@ -161,7 +161,7 @@ Los Draft PRs permiten trabajo en progreso sin solicitar review. **Política rec
 
 # Adaptar el modo según el estado del PR
 - name: Semgrep Scan
-  uses: ./.github/workflows/reusable/semgrep-scan.yml
+  uses: ./.github/workflows/reusable-semgrep-scan.yml
   with:
     report-only: ${{ github.event.pull_request.draft == true }}
 ```
@@ -232,7 +232,7 @@ Para cambios de alta sensibilidad (modificaciones a workflows, config de Semgrep
 ```yaml
 # CODEOWNERS — Dual control para archivos críticos
 # Requiere aprobación de DOS personas distintas del security-team
-.github/workflows/reusable/   @jgutierrezdtt/security-team
+.github/workflows/ (reusable-)    @jgutierrezdtt/security-team
 config/semgrep/               @jgutierrezdtt/security-team
 ```
 

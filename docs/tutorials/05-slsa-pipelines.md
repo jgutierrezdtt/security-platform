@@ -37,7 +37,7 @@ SLSA responde estas preguntas con **provenance**: metadatos firmados criptográf
 
 ## 1. Arquitectura del workflow SLSA L3
 
-El workflow reutilizable [`reusable/slsa-build.yml`](../../.github/workflows/reusable/slsa-build.yml) implementa SLSA L3:
+El workflow reutilizable [`reusable/slsa-build.yml`](../../.github/workflows/reusable-slsa-build.yml) implementa SLSA L3:
 
 ```
 Job: build
@@ -81,7 +81,7 @@ permissions:
 jobs:
   release:
     name: Build & Publish
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-slsa-build.yml@main
     permissions:
       # Estos permisos son necesarios para el job de provenance
       actions: read
@@ -112,7 +112,7 @@ permissions:
 
 jobs:
   build-linux-amd64:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-slsa-build.yml@main
     permissions:
       actions: read
       id-token: write
@@ -126,7 +126,7 @@ jobs:
       go-version: "1.22"
 
   build-linux-arm64:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-slsa-build.yml@main
     permissions:
       actions: read
       id-token: write
@@ -140,7 +140,7 @@ jobs:
       go-version: "1.22"
 
   build-windows:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-slsa-build.yml@main
     permissions:
       actions: read
       id-token: write

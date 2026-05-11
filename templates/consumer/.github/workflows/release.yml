@@ -17,7 +17,7 @@ permissions:
 jobs:
   release:
     name: Build & Release
-    uses: amazing-protection/security-platform/.github/workflows/reusable/slsa-build.yml@main
+    uses: amazing-protection/security-platform/.github/workflows/reusable-slsa-build.yml@main
     permissions:
       actions: read
       id-token: write    # Requerido para firma OIDC (SLSA L3)

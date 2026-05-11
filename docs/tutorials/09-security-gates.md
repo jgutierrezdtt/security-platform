@@ -47,7 +47,7 @@ El security gate se puede configurar en modo `report-only` para:
 # Habilitar report-only para hotfixes
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       report-only: ${{ contains(github.ref, 'hotfix/') }}
 ```
@@ -143,7 +143,7 @@ jobs:
   # ─── Gate 1: SAST con Semgrep ──────────────────────────────
   semgrep:
     name: Semgrep SAST          # ← Este nombre es el "context" en branch protection
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       scan-scope: ${{ github.event_name == 'pull_request' && 'diff' || 'full' }}
       fail-on-severity: high
@@ -156,7 +156,7 @@ jobs:
   # ─── Gate 2: Dependencias vulnerables ─────────────────────
   dependabot:
     name: Dependabot Status     # ← Este nombre es el "context" en branch protection
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-dependabot-check.yml@main
     with:
       fail-on-critical: true
       fail-on-high: true

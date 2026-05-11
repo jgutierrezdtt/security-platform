@@ -201,7 +201,7 @@ Security Summary Job
 **Título:** Doble control donde más importa
 
 **Reglas aplicadas en `security-platform`:**
-- `main` requiere **2 aprobaciones** de `security-team` para `.github/workflows/reusable/`
+- `main` requiere **2 aprobaciones** de `security-team` para `.github/workflows/reusable-`
 - No se puede hacer push directo a `main`
 - No se permite self-merge
 - Los checks de CI deben pasar antes de mergear

@@ -49,7 +49,7 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep SAST
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       scan-scope: ${{ github.event_name == 'pull_request' && 'diff' || 'full' }}
       fail-on-severity: high
@@ -64,7 +64,7 @@ jobs:
 ```yaml
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       scan-scope: diff                  # Solo cambios del PR (más rápido)
       fail-on-severity: high            # Bloquear en críticas y altas
@@ -580,7 +580,7 @@ Si usas CodeQL para taint analysis, deshabilita en Semgrep los rulesets que se s
 # En tu llamada al workflow, no actives los rulesets que CodeQL ya cubre
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       semgrep-rules: >-
         p/default

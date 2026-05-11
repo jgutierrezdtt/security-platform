@@ -158,7 +158,7 @@ Son los duenos de la politica de seguridad. Controlan que se puede escanear, que
 **Mantenimiento de la plataforma:**
 - Actualizar `semgrep==1.70.0` y las versiones de las GitHub Actions cuando haya nuevas versiones relevantes
 - Revisar el OpenSSF Scorecard de `security-platform` mensualmente y mejorar la puntuacion
-- Aprobar cualquier PR que modifique `.github/workflows/reusable/` — requiere 2 aprobaciones del security team
+- Aprobar cualquier PR que modifique `.github/workflows/reusable-` — requiere 2 aprobaciones del security team
 
 **Lo que NO hacen:**
 - Configurar repos individuales de los equipos de desarrollo (eso es de desarrollo o governance)
@@ -174,7 +174,7 @@ El principio central es simple: **las reglas viven en un sitio, los repos solo l
 ```
 jgutierrezdtt/
  ├── security-platform/          ← Este repo — reglas, workflows, tutoriales
- │    └── .github/workflows/reusable/
+ │    └── .github/workflows/reusable-
  │         ├── semgrep-scan.yml       ← logica de escaneo
  │         ├── dependabot-check.yml   ← logica de dependencias
  │         └── slsa-build.yml         ← firma de artefactos
@@ -206,9 +206,9 @@ que simplemente llama a este repo:
 ```yaml
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
   dependabot:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-dependabot-check.yml@main
 ```
 
 Ese archivo no cambia nunca. Las actualizaciones de seguridad no requieren ningun
@@ -248,13 +248,13 @@ permissions:
 
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     secrets:
       EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}
       SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
   dependabot:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-dependabot-check.yml@main
     secrets:
       DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}
 ```

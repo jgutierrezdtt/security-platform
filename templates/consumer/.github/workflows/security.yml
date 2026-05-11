@@ -44,7 +44,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────
   semgrep:
     name: Semgrep SAST
-    uses: amazing-protection/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: amazing-protection/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       # "diff" analiza solo los cambios del PR (más rápido)
       # "full" analiza todo el repositorio (recomendado en schedule)
@@ -87,7 +87,7 @@ jobs:
   # ───────────────────────────────────────────────────────────────
   dependabot:
     name: Dependabot Status
-    uses: amazing-protection/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: amazing-protection/security-platform/.github/workflows/reusable-dependabot-check.yml@main
     with:
       # Bloquear si hay alertas críticas sin resolver (0 tolerancia)
       fail-on-critical: true

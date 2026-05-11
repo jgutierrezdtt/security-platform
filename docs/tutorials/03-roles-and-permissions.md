@@ -173,7 +173,7 @@ Los workflows de GitHub Actions deben declarar permisos explícitamente:
 # En el workflow llamante (consumer)
 jobs:
   semgrep:
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     # Nunca dar permisos extras. Los reusable workflows solo pueden usar lo que declaran.
     secrets:
       EXCEPTIONS_READER_TOKEN: ${{ secrets.EXCEPTIONS_READER_TOKEN }}

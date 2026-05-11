@@ -28,7 +28,7 @@ jobs:
   # ─── Semgrep ─────────────────────────────────
   semgrep:
     name: Semgrep SAST
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/semgrep-scan.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-semgrep-scan.yml@main
     with:
       scan-scope: ${{ github.event_name == 'schedule' && 'full' || inputs.scan-scope || 'diff' }}
       fail-on-severity: high
@@ -42,7 +42,7 @@ jobs:
   # ─── Dependabot check ────────────────────────
   dependabot:
     name: Dependabot Status
-    uses: jgutierrezdtt/security-platform/.github/workflows/reusable/dependabot-check.yml@main
+    uses: jgutierrezdtt/security-platform/.github/workflows/reusable-dependabot-check.yml@main
     with:
       fail-on-critical: true
       fail-on-high: true
