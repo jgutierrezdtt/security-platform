@@ -34,7 +34,8 @@ on:
           Fine-grained PAT con permisos:
           - Repository: Dependabot alerts (read)
           - Repository: Contents (read)
-        required: true
+          Si no se configura, el check se omite con un aviso.
+        required: false
 
     outputs:
       dependabot-enabled:
@@ -104,8 +105,19 @@ jobs:
           import urllib.request
           import urllib.error
 
-          TOKEN = os.environ["DEPENDABOT_CHECK_TOKEN"]
+          TOKEN = os.environ.get("DEPENDABOT_CHECK_TOKEN", "")
           REPO = os.environ["REPO"]
+
+          # Si no hay token, reportar y salir sin bloquear
+          if not TOKEN:
+              print("⚠️  DEPENDABOT_CHECK_TOKEN no configurado. Configura el secret para habilitar este check.")
+              print("   Instrucciones: https://jgutierrezdtt.github.io/security-platform/tutorials/06-dependabot-activation.html")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("dependabot-enabled=skipped\n")
+                  f.write("critical-alerts=0\n")
+                  f.write("high-alerts=0\n")
+                  f.write("total-alerts=0\n")
+              sys.exit(0)
           FAIL_ON_CRITICAL = os.environ.get("FAIL_ON_CRITICAL", "true").lower() == "true"
           FAIL_ON_HIGH = os.environ.get("FAIL_ON_HIGH", "true").lower() == "true"
           MAX_CRITICAL = int(os.environ.get("MAX_CRITICAL", "0"))

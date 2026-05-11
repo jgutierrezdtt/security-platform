@@ -40,8 +40,8 @@ on:
         description: "Token de Semgrep Cloud Platform (opcional pero recomendado para reglas Pro)"
         required: false
       EXCEPTIONS_READER_TOKEN:
-        description: "Fine-grained PAT con permiso 'Contents: Read' al repo de excepciones"
-        required: true
+        description: "Fine-grained PAT con permiso 'Contents: Read' al repo de excepciones. Si no se configura, se omite el filtrado de excepciones."
+        required: false
 
     outputs:
       findings-count:
