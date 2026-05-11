@@ -255,6 +255,8 @@ jobs:
               "CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡",
               "LOW": "🔵", "WARNING": "⚪", "INFO": "⚪"
           }
+          # Semgrep usa ERROR/WARNING/INFO — normalizar a nuestro schema
+          SEMGREP_SEV_MAP = {"ERROR": "HIGH", "WARNING": "MEDIUM", "INFO": "INFO"}
           FAIL_ON_SEVERITY = os.environ.get("FAIL_ON_SEVERITY", "high").upper()
           REPORT_ONLY = os.environ.get("REPORT_ONLY", "false").lower() == "true"
 
@@ -305,13 +307,17 @@ jobs:
           # Contar por severidad
           counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "WARNING": 0, "INFO": 0}
           for f in active_findings:
-              sev = f.get("extra", {}).get("severity", "WARNING").upper()
+              raw_sev = f.get("extra", {}).get("severity", "WARNING").upper()
+              sev = SEMGREP_SEV_MAP.get(raw_sev, raw_sev)
               counts[sev] = counts.get(sev, 0) + 1
 
           # Ordenar por severidad
           active_findings.sort(
               key=lambda f: SEVERITY_ORDER.get(
-                  f.get("extra", {}).get("severity", "WARNING").upper(), 0
+                  SEMGREP_SEV_MAP.get(
+                      f.get("extra", {}).get("severity", "WARNING").upper(), 
+                      f.get("extra", {}).get("severity", "WARNING").upper()
+                  ), 0
               ),
               reverse=True
           )
@@ -356,7 +362,8 @@ jobs:
               lines.append("|---|-----------|-------|---------|-------|-------------|")
 
               for i, finding in enumerate(active_findings[:50], 1):  # Limitar a 50 en PR
-                  sev = finding.get("extra", {}).get("severity", "WARNING").upper()
+                  raw_sev = finding.get("extra", {}).get("severity", "WARNING").upper()
+                  sev = SEMGREP_SEV_MAP.get(raw_sev, raw_sev)
                   emoji = SEVERITY_EMOJI.get(sev, "⚪")
                   rule = finding.get("check_id", "unknown").split(".")[-1]
                   path = finding.get("path", "unknown")
