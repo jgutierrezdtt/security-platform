@@ -374,6 +374,8 @@ jobs:
           lines.append("---")
           lines.append("*Tu PR está bloqueado? Consulta la [guía paso a paso](https://github.com/jgutierrezdtt/security-platform/blob/main/docs/tutorials/pr-blocked-guide.md) — explica cómo corregir cada tipo de hallazgo o solicitar una excepción.*")
 
+          markdown_report = "\n".join(lines)
+
           with open(".security/report.md", "w") as f:
               f.write(markdown_report)
 
