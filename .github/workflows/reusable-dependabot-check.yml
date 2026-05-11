@@ -27,6 +27,18 @@ on:
         description: "Solo reportar, sin bloquear el pipeline"
         type: boolean
         default: false
+      create-issues:
+        description: "Crear GitHub Issues para alertas CRITICAL/HIGH en dependencias directas"
+        type: boolean
+        default: false
+      create-issues-min-severity:
+        description: "Severidad mínima para crear issue: critical | high"
+        type: string
+        default: "high"
+      direct-only:
+        description: "Solo crear issues para dependencias directas (no transitivas)"
+        type: boolean
+        default: true
 
     secrets:
       DEPENDABOT_CHECK_TOKEN:
@@ -59,6 +71,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      issues: write
 
     outputs:
       dependabot-enabled: ${{ steps.check-alerts.outputs.dependabot-enabled }}
@@ -296,3 +309,160 @@ jobs:
           header: dependabot-results
           path: .security/dependabot-report.md
         continue-on-error: true
+
+      # ─────────────────────────────────────────────
+      # 4. Crear GitHub Issues para alertas CRITICAL/HIGH (dependencias directas)
+      # ─────────────────────────────────────────────
+      - name: Create issues for critical/high alerts
+        if: inputs.create-issues == true && steps.check-alerts.outputs.dependabot-enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPENDABOT_CHECK_TOKEN: ${{ secrets.DEPENDABOT_CHECK_TOKEN }}
+          REPO: ${{ github.repository }}
+          MIN_SEVERITY: ${{ inputs.create-issues-min-severity }}
+          DIRECT_ONLY: ${{ inputs.direct-only }}
+        run: |
+          python3 << 'PYTHON'
+          import os
+          import sys
+          import json
+          import subprocess
+          import urllib.request
+          import urllib.error
+
+          TOKEN = os.environ.get("DEPENDABOT_CHECK_TOKEN", "")
+          REPO = os.environ["REPO"]
+          MIN_SEVERITY = os.environ.get("MIN_SEVERITY", "high").lower()
+          DIRECT_ONLY = os.environ.get("DIRECT_ONLY", "true").lower() == "true"
+
+          if not TOKEN:
+              print("⚠️  DEPENDABOT_CHECK_TOKEN no configurado — omitiendo creación de issues")
+              sys.exit(0)
+
+          SEV_ORDER = {"critical": 2, "high": 1, "medium": 0, "low": 0}
+          min_level = SEV_ORDER.get(MIN_SEVERITY, 1)
+
+          def gh_api(path):
+              req = urllib.request.Request(
+                  f"https://api.github.com{path}",
+                  headers={
+                      "Authorization": f"Bearer {TOKEN}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28"
+                  }
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return json.loads(r.read()), r.status
+              except urllib.error.HTTPError as e:
+                  return None, e.code
+
+          # Obtener alertas abiertas
+          page, all_alerts = 1, []
+          while True:
+              alerts, status = gh_api(f"/repos/{REPO}/dependabot/alerts?state=open&per_page=100&page={page}")
+              if not alerts or status not in (200,):
+                  break
+              all_alerts.extend(alerts)
+              if len(alerts) < 100:
+                  break
+              page += 1
+
+          created = 0
+          for alert in all_alerts:
+              sev = alert.get("security_vulnerability", {}).get("severity", "unknown").lower()
+              if SEV_ORDER.get(sev, 0) < min_level:
+                  continue
+
+              # Filtrar por dependencia directa si está activado
+              scope = alert.get("dependency", {}).get("scope", "")
+              if DIRECT_ONLY and scope != "runtime":
+                  # scope == "runtime" son las directas en la mayoría de ecosistemas
+                  # scope == "development" son devDependencies
+                  # scope == "" puede ser transitiva — la excluimos si direct_only
+                  if scope not in ("runtime", ""):
+                      continue
+
+              pkg = alert.get("dependency", {}).get("package", {}).get("name", "unknown")
+              ecosystem = alert.get("dependency", {}).get("package", {}).get("ecosystem", "")
+              vuln = alert.get("security_vulnerability", {})
+              advisory = alert.get("security_advisory", {})
+              cve = advisory.get("cve_id", "N/A")
+              alert_num = alert.get("number", "?")
+              vulnerable_range = vuln.get("vulnerable_version_range", "desconocido")
+              patched_version = vuln.get("first_patched_version", {})
+              if isinstance(patched_version, dict):
+                  patched_version = patched_version.get("identifier", "No disponible")
+              description = advisory.get("description", "Sin descripción disponible.")[:500]
+              alert_url = f"https://github.com/{REPO}/security/dependabot/{alert_num}"
+              dependency_type = "Directa" if scope == "runtime" else ("Directa" if not scope else "Transitiva/Desarrollo")
+
+              title = f"[Dependabot] {sev.upper()}: {pkg} ({cve}) — dependencia vulnerable"
+
+              # Comprobar si ya existe un issue abierto con ese título
+              check = subprocess.run(
+                  ["gh", "issue", "list", "--state", "open",
+                   "--label", "dependabot-alert",
+                   "--search", title[:80],
+                   "--json", "title", "--limit", "10"],
+                  capture_output=True, text=True
+              )
+              existing = json.loads(check.stdout or "[]")
+              if any(i.get("title", "") == title for i in existing):
+                  print(f"ℹ️  Issue ya existe para {pkg} ({cve}) — omitiendo")
+                  continue
+
+              body = f"""## 📦 Dependencia vulnerable detectada por Dependabot
+
+**Paquete**: `{pkg}`
+**Ecosistema**: {ecosystem}
+**Severidad**: {sev.upper()}
+**CVE**: {cve}
+**Tipo de dependencia**: {dependency_type}
+**Alerta Dependabot**: [#{alert_num}]({alert_url})
+
+### Descripción del CVE
+{description}
+
+### Versiones afectadas
+- **Rango vulnerable**: `{vulnerable_range}`
+- **Primera versión parcheada**: `{patched_version}`
+
+### Cómo remediar
+
+1. Actualiza `{pkg}` en tu archivo de dependencias:
+   ```
+   {pkg}>={patched_version}
+   ```
+2. Ejecuta la instalación: `pip install -r requirements.txt` (o el equivalente de tu ecosistema)
+3. Ejecuta los tests para verificar que no hay regresiones
+4. Abre un PR con el cambio — Dependabot puede crear el PR automáticamente si tienes `security updates` habilitado
+
+### Ver la alerta completa
+{alert_url}
+
+---
+*Generado automáticamente por el pipeline de Dependabot Check.*
+*Si la dependencia ya está actualizada, cierra este issue.*"""
+
+              sev_label = sev.lower()
+              labels = f"security,dependabot-alert,{sev_label}"
+              if scope == "runtime" or not scope:
+                  labels += ",direct-dependency"
+
+              result = subprocess.run(
+                  ["gh", "issue", "create",
+                   "--title", title,
+                   "--body", body,
+                   "--label", labels],
+                  capture_output=True, text=True
+              )
+              if result.returncode == 0:
+                  print(f"✅ Issue creado: {title}")
+                  created += 1
+              else:
+                  print(f"⚠️  No se pudo crear issue para {pkg}: {result.stderr[:200]}")
+
+          print(f"\n→ {created} issues creados")
+          PYTHON
+        continue-on-error: true  # No fallar el pipeline si la creación de issues falla
